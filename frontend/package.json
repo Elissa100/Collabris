@@ -16,6 +16,7 @@
     "@mui/icons-material": "^5.15.1",
     "@mui/material": "^5.15.1",
     "@mui/x-charts": "^6.18.1",
+    "@mui/x-data-grid": "^6.18.1",
     "@reduxjs/toolkit": "^2.0.1",
     "axios": "^1.6.2",
     "framer-motion": "^10.16.16",
@@ -27,6 +28,8 @@
     "react-redux": "^9.0.4",
     "react-router-dom": "^6.20.1",
     "recharts": "^2.8.0",
+    "sockjs-client": "^1.6.1",
+    "stompjs": "^2.3.3",
     "yup": "^1.4.0"
   },
   "devDependencies": {
