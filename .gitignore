@@ -1,0 +1,28 @@
+# Java / Maven
+target/
+*.class
+*.jar
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Node / frontend
+node_modules/
+dist/
+build/
+
+# Logs, OS
+*.log
+.DS_Store
+
+# Secrets, environment
+.env
+*.key
+*.pem
+uploads/    # don't commit uploaded files
+/.mvn/wrapper/maven-wrapper.jar
+
+# other
+/.gradle/
