@@ -14,6 +14,7 @@ import './theme/customStyles.css';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
+import Landing from './pages/Landing/Landing';
 
 const AppContent: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -43,11 +44,7 @@ const AppContent: React.FC = () => {
             element={
               isAuthenticated ? 
                 <Navigate to={defaultDashboard} replace /> : 
-                <div style={{ padding: '2rem', textAlign: 'center' }}>
-                  <h1>Welcome to Collabris</h1>
-                  <p>Landing page coming soon...</p>
-                  <a href="/login">Login</a> | <a href="/register">Register</a>
-                </div>
+                <Landing />
             } 
           />
           <Route 

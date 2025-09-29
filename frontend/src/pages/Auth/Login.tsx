@@ -32,10 +32,10 @@ import { LoginRequest } from '../../types';
 import '../../theme/customStyles.css';
 
 const loginSchema = yup.object().shape({
-  email: yup
+  username: yup
     .string()
-    .email('Please enter a valid email address')
-    .required('Email is required'),
+    .min(3, 'Username must be at least 3 characters')
+    .required('Username is required'),
   password: yup
     .string()
     .min(6, 'Password must be at least 6 characters')
@@ -56,7 +56,7 @@ const Login: React.FC = () => {
   const { control, handleSubmit, formState: { errors } } = useForm<LoginRequest>({
     resolver: yupResolver(loginSchema),
     defaultValues: {
-      email: '',
+      username: '',
       password: '',
     },
   });
@@ -173,17 +173,17 @@ const Login: React.FC = () => {
           {/* Login Form */}
           <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
             <Controller
-              name="email"
+              name="username"
               control={control}
               render={({ field }) => (
                 <TextField
                   {...field}
                   fullWidth
-                  label="Email Address"
-                  type="email"
-                  autoComplete="email"
-                  error={!!errors.email}
-                  helperText={errors.email?.message}
+                  label="Username"
+                  type="text"
+                  autoComplete="username"
+                  error={!!errors.username}
+                  helperText={errors.username?.message}
                   sx={{ mb: 2 }}
                   InputProps={{
                     startAdornment: (

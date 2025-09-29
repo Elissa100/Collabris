@@ -132,8 +132,8 @@ const authSlice = createSlice({
         state.user = {
           id: action.payload.id,
           email: action.payload.email,
-          firstName: action.payload.firstName,
-          lastName: action.payload.lastName,
+          firstName: '', // Will be loaded later from getCurrentUser
+          lastName: '', // Will be loaded later from getCurrentUser
           username: action.payload.username,
           roles: action.payload.roles.map(role => ({ id: 0, name: role as any })),
         };

@@ -33,6 +33,11 @@ import { SignupRequest } from '../../types';
 import '../../theme/customStyles.css';
 
 const registerSchema = yup.object().shape({
+  username: yup
+    .string()
+    .required('Username is required')
+    .min(3, 'Username must be at least 3 characters')
+    .max(20, 'Username must be less than 20 characters'),
   firstName: yup
     .string()
     .required('First name is required')
@@ -47,11 +52,7 @@ const registerSchema = yup.object().shape({
     .required('Email is required'),
   password: yup
     .string()
-    .min(8, 'Password must be at least 8 characters')
-    .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'Password must contain at least one uppercase letter, one lowercase letter, and one number'
-    )
+    .min(6, 'Password must be at least 6 characters')
     .required('Password is required'),
   confirmPassword: yup
     .string()
@@ -73,6 +74,7 @@ const Register: React.FC = () => {
   const { control, handleSubmit, formState: { errors } } = useForm<SignupRequest & { confirmPassword: string }>({
     resolver: yupResolver(registerSchema),
     defaultValues: {
+      username: '',
       firstName: '',
       lastName: '',
       email: '',
@@ -237,6 +239,30 @@ const Register: React.FC = () => {
                 )}
               />
             </Box>
+
+            <Controller
+              name="username"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="Username"
+                  type="text"
+                  autoComplete="username"
+                  error={!!errors.username}
+                  helperText={errors.username?.message}
+                  sx={{ mb: 2 }}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PersonIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              )}
+            />
 
             <Controller
               name="email"
