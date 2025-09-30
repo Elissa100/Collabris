@@ -47,7 +47,7 @@ export const getProjectMembers = async (projectId: number): Promise<User[]> => {
 };
 
 export const getUserProjects = async (userId?: number): Promise<Project[]> => {
-  const url = userId ? `/api/projects/user/${userId}` : '/api/projects/my';
+  const url = userId ? `/api/projects/user/${userId}` : '/api/projects/my-projects';
   const response = await apiClient.get<Project[]>(url);
   return response;
 };

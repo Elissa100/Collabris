@@ -19,8 +19,8 @@ public class JwtResponse {
     }
 
     // Getters and Setters
-    public String getAccessToken() { return token; }
-    public void setAccessToken(String accessToken) { this.token = accessToken; }
+    public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
 
     public String getTokenType() { return type; }
     public void setTokenType(String tokenType) { this.type = tokenType; }

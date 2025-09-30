@@ -36,7 +36,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppSelector } from '../store/store';
 import { selectUser } from '../store/slices/authSlice';
-import api from '../services/api';
+import { getUserProjects } from '../services/projectService';
+import { getUserTeams } from '../services/teamService';
+import { Project, Team } from '../types';
 
 interface DashboardStats {
   totalProjects: number;
@@ -55,28 +57,7 @@ interface RecentActivity {
   avatar?: string;
 }
 
-interface Project {
-  id: number;
-  name: string;
-  description: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'ON_HOLD';
-  progress: number;
-  teamId: number;
-  teamName?: string;
-  memberCount: number;
-  dueDate?: string;
-  createdAt: string;
-}
-
-interface Team {
-  id: number;
-  name: string;
-  description: string;
-  memberCount: number;
-  projectCount: number;
-  isOwner: boolean;
-  isAdmin: boolean;
-}
+// Using imported Project and Team types from '../types'
 
 const Dashboard: React.FC = () => {
   const theme = useTheme();
@@ -100,15 +81,13 @@ const Dashboard: React.FC = () => {
         setLoading(true);
         
         // Fetch user's projects
-        const projectsResponse = await api.get('/projects/user');
-        const projects = projectsResponse.data;
+        const projects = await getUserProjects();
         
         // Fetch user's teams
-        const teamsResponse = await api.get('/teams/user');
-        const teams = teamsResponse.data;
+        const teams = await getUserTeams();
         
         // Calculate stats
-        const activeProjects = projects.filter((p: Project) => p.status === 'ACTIVE');
+        const activeProjects = projects.filter((p: Project) => p.status === 'IN_PROGRESS');
         const completedProjects = projects.filter((p: Project) => p.status === 'COMPLETED');
         
         setStats({
@@ -177,12 +156,14 @@ const Dashboard: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE':
+      case 'IN_PROGRESS':
         return theme.palette.success.main;
       case 'COMPLETED':
         return theme.palette.info.main;
       case 'ON_HOLD':
         return theme.palette.warning.main;
+      case 'PLANNING':
+        return theme.palette.info.main;
       default:
         return theme.palette.grey[500];
     }
@@ -445,11 +426,11 @@ const Dashboard: React.FC = () => {
                           </Box>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                              {project.memberCount} members
+                              {project.members?.length || 0} members
                             </Typography>
-                            {project.dueDate && (
+                            {project.deadline && (
                               <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                                Due {new Date(project.dueDate).toLocaleDateString()}
+                                Due {new Date(project.deadline).toLocaleDateString()}
                               </Typography>
                             )}
                           </Box>
@@ -544,7 +525,7 @@ const Dashboard: React.FC = () => {
                           </ListItemAvatar>
                           <ListItemText
                             primary={team.name}
-                            secondary={`${team.memberCount} members • ${team.projectCount} projects`}
+                            secondary={`${team.members?.length || 0} members • ${team.projects?.length || 0} projects`}
                             primaryTypographyProps={{ fontWeight: 600 }}
                           />
                           <ListItemSecondaryAction>

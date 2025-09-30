@@ -11,10 +11,12 @@ import { selectIsAuthenticated, selectUser, getCurrentUser } from './store/slice
 import './theme/customStyles.css';
 
 // Import components
-import ProtectedRoute from './components/Auth/ProtectedRoute';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import Layout from './components/Layout/Layout';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import Landing from './pages/Landing/Landing';
+import Dashboard from './pages/Dashboard';
 
 const AppContent: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -22,6 +24,14 @@ const AppContent: React.FC = () => {
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
   const user = useAppSelector(selectUser);
   const theme = createCollabrisTheme(themeMode);
+
+  useEffect(() => {
+    // Initialize authentication on app start
+    const token = localStorage.getItem('token');
+    if (token && !user) {
+      dispatch(getCurrentUser());
+    }
+  }, [dispatch, user]);
 
   useEffect(() => {
     // Load user data if authenticated but no user data
@@ -67,19 +77,75 @@ const AppContent: React.FC = () => {
           {/* Protected Routes */}
           <Route path="/dashboard" element={
             <ProtectedRoute>
-              <div style={{ padding: '2rem' }}>
-                <h1>User Dashboard</h1>
-                <p>Dashboard coming soon...</p>
-              </div>
+              <Layout>
+                <Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/teams" element={
+            <ProtectedRoute>
+              <Layout>
+                <div style={{ padding: '2rem' }}>
+                  <h1>Teams Management</h1>
+                  <p>Teams page coming soon...</p>
+                </div>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/projects" element={
+            <ProtectedRoute>
+              <Layout>
+                <div style={{ padding: '2rem' }}>
+                  <h1>Project Management</h1>
+                  <p>Projects page coming soon...</p>
+                </div>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/chat" element={
+            <ProtectedRoute>
+              <Layout>
+                <div style={{ padding: '2rem' }}>
+                  <h1>Real-time Chat</h1>
+                  <p>Chat page coming soon...</p>
+                </div>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Layout>
+                <div style={{ padding: '2rem' }}>
+                  <h1>User Profile</h1>
+                  <p>Profile page coming soon...</p>
+                </div>
+              </Layout>
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Layout>
+                <div style={{ padding: '2rem' }}>
+                  <h1>Settings</h1>
+                  <p>Settings page coming soon...</p>
+                </div>
+              </Layout>
             </ProtectedRoute>
           } />
 
           <Route path="/admin/dashboard" element={
             <ProtectedRoute requiredRoles={['ADMIN']}>
-              <div style={{ padding: '2rem' }}>
-                <h1>Admin Dashboard</h1>
-                <p>Admin dashboard coming soon...</p>
-              </div>
+              <Layout>
+                <div style={{ padding: '2rem' }}>
+                  <h1>Admin Dashboard</h1>
+                  <p>Admin dashboard coming soon...</p>
+                </div>
+              </Layout>
             </ProtectedRoute>
           } />
 

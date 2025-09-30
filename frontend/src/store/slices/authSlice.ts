@@ -12,15 +12,20 @@ interface AuthState {
   lastLoginAttempt: number | null;
 }
 
-const initialState: AuthState = {
-  user: null,
-  token: localStorage.getItem('token'),
-  isAuthenticated: !!localStorage.getItem('token'),
-  isLoading: false,
-  error: null,
-  loginAttempts: 0,
-  lastLoginAttempt: null,
+const getInitialState = (): AuthState => {
+  const token = localStorage.getItem('token');
+  return {
+    user: null,
+    token,
+    isAuthenticated: !!token,
+    isLoading: !!token, // Set loading true if we have a token to validate
+    error: null,
+    loginAttempts: 0,
+    lastLoginAttempt: null,
+  };
 };
+
+const initialState: AuthState = getInitialState();
 
 // Async thunks
 export const login = createAsyncThunk(

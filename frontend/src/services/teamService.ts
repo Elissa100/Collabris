@@ -47,7 +47,7 @@ export const getTeamMembers = async (teamId: number): Promise<User[]> => {
 };
 
 export const getUserTeams = async (userId?: number): Promise<Team[]> => {
-  const url = userId ? `/api/teams/user/${userId}` : '/api/teams/my';
+  const url = userId ? `/api/teams/user/${userId}` : '/api/teams/my-teams';
   const response = await apiClient.get<Team[]>(url);
   return response;
 };
