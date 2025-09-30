@@ -1,15 +1,17 @@
 package com.collabris.controller;
 
-import com.collabris.dto.request.LoginRequest;
-import com.collabris.dto.request.SignupRequest;
+import com.collabris.dto.request.*;
 import com.collabris.dto.response.JwtResponse;
 import com.collabris.dto.response.MessageResponse;
 import com.collabris.entity.Role;
 import com.collabris.entity.User;
+import com.collabris.entity.VerificationToken;
 import com.collabris.repository.RoleRepository;
 import com.collabris.repository.UserRepository;
 import com.collabris.security.jwt.JwtUtils;
 import com.collabris.security.services.UserPrinciple;
+import com.collabris.service.TokenService;
+import com.collabris.service.EmailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
