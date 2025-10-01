@@ -13,15 +13,8 @@ import {
   IconButton,
   Divider,
   useTheme,
-  alpha,
 } from '@mui/material';
-import {
-  Email as EmailIcon,
-  Lock as LockIcon,
-  Visibility as VisibilityIcon,
-  VisibilityOff as VisibilityOffIcon,
-  Login as LoginIcon,
-} from '@mui/icons-material';
+import { Visibility as VisibilityIcon, VisibilityOff as VisibilityOffIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -32,14 +25,8 @@ import { LoginRequest } from '../../types';
 import '../../theme/customStyles.css';
 
 const loginSchema = yup.object().shape({
-  username: yup
-    .string()
-    .min(3, 'Username must be at least 3 characters')
-    .required('Username or Email is required'),
-  password: yup
-    .string()
-    .min(6, 'Password must be at least 6 characters')
-    .required('Password is required'),
+  username: yup.string().required('Username or Email is required'),
+  password: yup.string().required('Password is required'),
 });
 
 const Login: React.FC = () => {
@@ -53,36 +40,28 @@ const Login: React.FC = () => {
   const error = useAppSelector(selectAuthError);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
-  const { control, handleSubmit, formState: { errors } } = useForm<LoginRequest>({
+  const { control, handleSubmit, formState: { errors }, getValues } = useForm<LoginRequest>({
     resolver: yupResolver(loginSchema),
-    defaultValues: {
-      username: '',
-      password: '',
-    },
   });
 
   useEffect(() => {
     dispatch(clearError());
   }, [dispatch]);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      const from = (location.state as any)?.from?.pathname || '/dashboard';
-      navigate(from, { replace: true });
-    }
-  }, [isAuthenticated, navigate, location]);
-
   const onSubmit = async (data: LoginRequest) => {
     try {
       await dispatch(login(data)).unwrap();
       dispatch(showSuccessNotification('Welcome back!', 'You have successfully logged in.'));
-      
       const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } catch (err: any) {
-        if (err.includes('verify your email')) {
-            navigate('/verify-email', { state: { email: control._formValues.username } });
+        // --- MODIFICATION START: Corrected error handling ---
+        if (err && err.message && err.message.includes('verify your email')) {
+            const username = getValues("username");
+            // The username could be an email, which is what the verification page needs
+            navigate('/verify-email', { state: { email: username } });
         }
+        // --- MODIFICATION END ---
     }
   };
 
@@ -93,19 +72,11 @@ const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: theme.palette.mode === 'light'
-          ? 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
-          : 'linear-gradient(135deg, #2D3748 0%, #4A5568 100%)',
+        background: `linear-gradient(135deg, ${theme.palette.grey[200]} 0%, ${theme.palette.grey[400]} 100%)`,
       }}
     >
       <Card
-        sx={{
-          maxWidth: 400,
-          width: '100%',
-          mx: 2,
-          borderRadius: 3,
-          boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-        }}
+        sx={{ maxWidth: 400, width: '100%', mx: 2, borderRadius: 3, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
         className="animate-fade-in"
       >
         <CardContent sx={{ p: 4 }}>
@@ -118,55 +89,24 @@ const Login: React.FC = () => {
             </Typography>
           </Box>
 
-          {error && (
-            <Alert severity="error" sx={{ mb: 3 }}>
-              {error}
-            </Alert>
-          )}
+          {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
           <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-            <Controller
-              name="username"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label="Username or Email" error={!!errors.username} helperText={errors.username?.message} sx={{ mb: 2 }} />
-              )}
-            />
-
-            <Controller
-              name="password"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} fullWidth label="Password" type={showPassword ? 'text' : 'password'} error={!!errors.password} helperText={errors.password?.message} sx={{ mb: 2 }} 
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                          {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              )}
-            />
-
+            <Controller name="username" control={control} render={({ field }) => ( <TextField {...field} fullWidth label="Username or Email" error={!!errors.username} helperText={errors.username?.message} sx={{ mb: 2 }} /> )}/>
+            <Controller name="password" control={control} render={({ field }) => ( <TextField {...field} fullWidth label="Password" type={showPassword ? 'text' : 'password'} error={!!errors.password} helperText={errors.password?.message} sx={{ mb: 2 }} InputProps={{ endAdornment: ( <InputAdornment position="end"> <IconButton onClick={() => setShowPassword(!showPassword)} edge="end"> {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />} </IconButton> </InputAdornment> ), }} /> )}/>
             <Box textAlign="right" sx={{ mb: 2 }}>
                 <Link component={RouterLink} to="/forgot-password" variant="body2">
                     Forgot Password?
                 </Link>
             </Box>
-
             <Button type="submit" fullWidth variant="contained" size="large" disabled={isLoading} sx={{ py: 1.5, mb: 2 }}>
               {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
-
             <Divider sx={{ my: 2 }}>
               <Typography variant="body2" color="text.secondary">
                 Don't have an account?
               </Typography>
             </Divider>
-
             <Box textAlign="center">
               <Link component={RouterLink} to="/register" variant="body2">
                 Create an account
