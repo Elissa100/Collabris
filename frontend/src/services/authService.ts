@@ -13,9 +13,30 @@ export const signup = async (userData: SignupRequest): Promise<{ message: string
 };
 
 export const getCurrentUser = async (): Promise<User> => {
-  const response = await apiClient.get('/api/users/me');
+  const response = await apiClient.get('/api/users/me'); 
   return response;
 };
+
+export const verifyEmail = async (data: { code: string }): Promise<{ message: string }> => {
+    return apiClient.post('/api/auth/verify-email', data);
+};
+
+export const resendVerificationEmail = async (data: { email: string }): Promise<{ message: string }> => {
+    return apiClient.post('/api/auth/resend-verification', data);
+};
+
+export const forgotPassword = async (data: { email: string }): Promise<{ message: string }> => {
+    return apiClient.post('/api/auth/forgot-password', data);
+};
+
+export const verifyResetCode = async (data: { email: string, code: string }): Promise<{ message: string }> => {
+    return apiClient.post('/api/auth/verify-reset-code', data);
+};
+
+export const resetPassword = async (data: { email: string, code: string, newPassword: string }): Promise<{ message: string }> => {
+    return apiClient.post('/api/auth/reset-password', data);
+};
+
 
 export const updateProfile = async (userData: Partial<User>): Promise<User> => {
   const response = await apiClient.put('/api/users/me', userData);

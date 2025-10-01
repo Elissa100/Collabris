@@ -9,12 +9,12 @@ export interface User {
   roles: Role[];
   createdAt?: string;
   updatedAt?: string;
-  isActive?: boolean;
+  enabled: boolean; // Added this property
 }
 
 export interface Role {
   id: number;
-  name: 'ADMIN' | 'MANAGER' | 'MEMBER';
+  name: 'ADMIN' | 'MANAGER' | 'MEMBER' | 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_MEMBER';
   description?: string;
 }
 

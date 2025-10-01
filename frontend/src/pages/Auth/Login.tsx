@@ -35,7 +35,7 @@ const loginSchema = yup.object().shape({
   username: yup
     .string()
     .min(3, 'Username must be at least 3 characters')
-    .required('Username is required'),
+    .required('Username or Email is required'),
   password: yup
     .string()
     .min(6, 'Password must be at least 6 characters')
@@ -62,12 +62,10 @@ const Login: React.FC = () => {
   });
 
   useEffect(() => {
-    // Clear any previous errors when component mounts
     dispatch(clearError());
   }, [dispatch]);
 
   useEffect(() => {
-    // Redirect if already authenticated
     if (isAuthenticated) {
       const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
@@ -81,14 +79,11 @@ const Login: React.FC = () => {
       
       const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
-    } catch (error) {
-      // Error is handled by the slice
-      console.error('Login failed:', error);
+    } catch (err: any) {
+        if (err.includes('verify your email')) {
+            navigate('/verify-email', { state: { email: control._formValues.username } });
+        }
     }
-  };
-
-  const handleTogglePasswordVisibility = () => {
-    setShowPassword(prev => !prev);
   };
 
   return (
@@ -99,19 +94,8 @@ const Login: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         background: theme.palette.mode === 'light'
-          ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+          ? 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)'
           : 'linear-gradient(135deg, #2D3748 0%, #4A5568 100%)',
-        backgroundAttachment: 'fixed',
-        position: 'relative',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="6" cy="6" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-        },
       }}
     >
       <Card
@@ -121,41 +105,12 @@ const Login: React.FC = () => {
           mx: 2,
           borderRadius: 3,
           boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-          backdropFilter: 'blur(10px)',
-          border: `1px solid ${alpha(theme.palette.common.white, 0.2)}`,
         }}
         className="animate-fade-in"
       >
         <CardContent sx={{ p: 4 }}>
-          {/* Header */}
           <Box textAlign="center" mb={3}>
-            <Box
-              sx={{
-                width: 60,
-                height: 60,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                mx: 'auto',
-                mb: 2,
-              }}
-            >
-              <LoginIcon sx={{ color: 'white', fontSize: 28 }} />
-            </Box>
-            <Typography
-              variant="h4"
-              component="h1"
-              sx={{
-                fontWeight: 700,
-                background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                mb: 1,
-              }}
-            >
+            <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
               Welcome Back
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -163,36 +118,18 @@ const Login: React.FC = () => {
             </Typography>
           </Box>
 
-          {/* Error Alert */}
           {error && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {error}
             </Alert>
           )}
 
-          {/* Login Form */}
           <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
             <Controller
               name="username"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Username"
-                  type="text"
-                  autoComplete="username"
-                  error={!!errors.username}
-                  helperText={errors.username?.message}
-                  sx={{ mb: 2 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <EmailIcon color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
+                <TextField {...field} fullWidth label="Username or Email" error={!!errors.username} helperText={errors.username?.message} sx={{ mb: 2 }} />
               )}
             />
 
@@ -200,28 +137,11 @@ const Login: React.FC = () => {
               name="password"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  error={!!errors.password}
-                  helperText={errors.password?.message}
-                  sx={{ mb: 3 }}
+                <TextField {...field} fullWidth label="Password" type={showPassword ? 'text' : 'password'} error={!!errors.password} helperText={errors.password?.message} sx={{ mb: 2 }} 
                   InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <LockIcon color="action" />
-                      </InputAdornment>
-                    ),
                     endAdornment: (
                       <InputAdornment position="end">
-                        <IconButton
-                          onClick={handleTogglePasswordVisibility}
-                          edge="end"
-                          aria-label="toggle password visibility"
-                        >
+                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
                           {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
                         </IconButton>
                       </InputAdornment>
@@ -231,24 +151,13 @@ const Login: React.FC = () => {
               )}
             />
 
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              disabled={isLoading}
-              sx={{
-                py: 1.5,
-                mb: 2,
-                background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-                '&:hover': {
-                  background: 'linear-gradient(135deg, #1d4ed8 0%, #6d28d9 100%)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 8px 25px rgba(37, 99, 235, 0.3)',
-                },
-                transition: 'all 0.3s ease',
-              }}
-            >
+            <Box textAlign="right" sx={{ mb: 2 }}>
+                <Link component={RouterLink} to="/forgot-password" variant="body2">
+                    Forgot Password?
+                </Link>
+            </Box>
+
+            <Button type="submit" fullWidth variant="contained" size="large" disabled={isLoading} sx={{ py: 1.5, mb: 2 }}>
               {isLoading ? 'Signing In...' : 'Sign In'}
             </Button>
 
@@ -259,22 +168,7 @@ const Login: React.FC = () => {
             </Divider>
 
             <Box textAlign="center">
-              <Link
-                component={RouterLink}
-                to="/register"
-                variant="body2"
-                sx={{
-                  textDecoration: 'none',
-                  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                  fontWeight: 500,
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  },
-                }}
-              >
+              <Link component={RouterLink} to="/register" variant="body2">
                 Create an account
               </Link>
             </Box>

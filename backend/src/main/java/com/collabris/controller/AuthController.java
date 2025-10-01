@@ -49,16 +49,21 @@ public class AuthController {
 
     @Autowired
     JwtUtils jwtUtils;
-    
+
     @Autowired
     TokenService tokenService;
-    
+
     @Autowired
     EmailService emailService;
 
     @PostMapping("/signin")
     @Operation(summary = "Sign in user", description = "Authenticate user and return JWT token")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
+
+        Optional<User> userOpt = userRepository.findByUsername(loginRequest.getUsername());
+        if(userOpt.isPresent() && !userOpt.get().isEnabled()){
+            return ResponseEntity.status(403).body(new MessageResponse("Error: Please verify your email before logging in."));
+        }
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
@@ -132,173 +137,173 @@ public class AuthController {
         user.setRoles(roles);
         user.setEnabled(false); // User must verify email first
         User savedUser = userRepository.save(user);
-        
+
         // Generate and send verification token
         VerificationToken verificationToken = tokenService.createVerificationToken(savedUser, VerificationToken.TokenType.EMAIL_VERIFICATION);
-        
+
         // Send verification email
         java.util.Map<String, String> emailVariables = new java.util.HashMap<>();
         emailVariables.put("firstName", savedUser.getFirstName());
         emailVariables.put("verificationCode", verificationToken.getCode());
-        
+
         emailService.sendEmail(
-            savedUser.getEmail(),
-            "Verify your Collabris account",
-            "templates/email-verification.html",
-            emailVariables
+                savedUser.getEmail(),
+                "Verify your Collabris account",
+                "templates/email-verification.html",
+                emailVariables
         );
-        
+
         return ResponseEntity.ok(new MessageResponse("User registered successfully! Please check your email to verify your account."));
     }
-    
+
     @PostMapping("/verify-email")
     @Operation(summary = "Verify email address", description = "Verify user's email address with verification code")
     public ResponseEntity<?> verifyEmail(@Valid @RequestBody VerifyEmailRequest verifyRequest) {
         Optional<VerificationToken> tokenOpt = tokenService.findValidToken(
-            verifyRequest.getCode(), 
-            VerificationToken.TokenType.EMAIL_VERIFICATION
+                verifyRequest.getCode(),
+                VerificationToken.TokenType.EMAIL_VERIFICATION
         );
-        
+
         if (tokenOpt.isEmpty()) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Invalid or expired verification code."));
+                    .body(new MessageResponse("Invalid or expired verification code."));
         }
-        
+
         VerificationToken token = tokenOpt.get();
         User user = token.getUser();
-        
+
         // Enable user account
         user.setEnabled(true);
         userRepository.save(user);
-        
+
         // Mark token as used
         tokenService.consumeToken(token);
-        
+
         return ResponseEntity.ok(new MessageResponse("Email verified successfully! You can now log in."));
     }
-    
+
     @PostMapping("/resend-verification")
     @Operation(summary = "Resend verification email", description = "Resend verification email to user")
     public ResponseEntity<?> resendVerificationEmail(@Valid @RequestBody ForgotPasswordRequest resendRequest) {
         Optional<User> userOpt = userRepository.findByEmail(resendRequest.getEmail());
-        
+
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("No account found with this email address."));
+                    .body(new MessageResponse("No account found with this email address."));
         }
-        
+
         User user = userOpt.get();
-        
+
         if (user.isEnabled()) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("This account is already verified."));
+                    .body(new MessageResponse("This account is already verified."));
         }
-        
+
         // Generate new verification token
         VerificationToken verificationToken = tokenService.createVerificationToken(user, VerificationToken.TokenType.EMAIL_VERIFICATION);
-        
+
         // Send verification email
         java.util.Map<String, String> emailVariables = new java.util.HashMap<>();
         emailVariables.put("firstName", user.getFirstName());
         emailVariables.put("verificationCode", verificationToken.getCode());
-        
+
         emailService.sendEmail(
-            user.getEmail(),
-            "Verify your Collabris account",
-            "templates/email-verification.html",
-            emailVariables
+                user.getEmail(),
+                "Verify your Collabris account",
+                "templates/email-verification.html",
+                emailVariables
         );
-        
+
         return ResponseEntity.ok(new MessageResponse("Verification email sent! Please check your email."));
     }
-    
+
     @PostMapping("/forgot-password")
     @Operation(summary = "Initiate password reset", description = "Send password reset code to user's email")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest forgotRequest) {
         Optional<User> userOpt = userRepository.findByEmail(forgotRequest.getEmail());
-        
+
         // Always return success to prevent email enumeration attacks
         if (userOpt.isEmpty()) {
             return ResponseEntity.ok(new MessageResponse("If an account with this email exists, you will receive a password reset code."));
         }
-        
+
         User user = userOpt.get();
-        
+
         if (!user.isEnabled()) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Please verify your email address first."));
+                    .body(new MessageResponse("Please verify your email address first."));
         }
-        
+
         // Generate password reset token
         VerificationToken resetToken = tokenService.createVerificationToken(user, VerificationToken.TokenType.PASSWORD_RESET);
-        
+
         // Send password reset email
         java.util.Map<String, String> emailVariables = new java.util.HashMap<>();
         emailVariables.put("firstName", user.getFirstName());
         emailVariables.put("verificationCode", resetToken.getCode());
-        
+
         emailService.sendEmail(
-            user.getEmail(),
-            "Reset your Collabris password",
-            "templates/password-reset.html",
-            emailVariables
+                user.getEmail(),
+                "Reset your Collabris password",
+                "templates/password-reset.html",
+                emailVariables
         );
-        
+
         return ResponseEntity.ok(new MessageResponse("If an account with this email exists, you will receive a password reset code."));
     }
-    
+
     @PostMapping("/verify-reset-code")
     @Operation(summary = "Verify password reset code", description = "Verify password reset code before allowing password change")
     public ResponseEntity<?> verifyResetCode(@Valid @RequestBody VerifyResetCodeRequest verifyRequest) {
         Optional<VerificationToken> tokenOpt = tokenService.findLatestTokenByEmail(
-            verifyRequest.getEmail(), 
-            VerificationToken.TokenType.PASSWORD_RESET
+                verifyRequest.getEmail(),
+                VerificationToken.TokenType.PASSWORD_RESET
         );
-        
+
         if (tokenOpt.isEmpty()) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Invalid or expired reset code."));
+                    .body(new MessageResponse("Invalid or expired reset code."));
         }
-        
+
         VerificationToken token = tokenOpt.get();
-        
+
         if (!token.getCode().equals(verifyRequest.getCode()) || token.isExpired() || token.isUsed()) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Invalid or expired reset code."));
+                    .body(new MessageResponse("Invalid or expired reset code."));
         }
-        
+
         return ResponseEntity.ok(new MessageResponse("Reset code verified. You can now set a new password."));
     }
-    
+
     @PostMapping("/reset-password")
     @Operation(summary = "Reset password", description = "Reset user password using verified code")
     public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest resetRequest) {
         Optional<VerificationToken> tokenOpt = tokenService.findLatestTokenByEmail(
-            resetRequest.getEmail(), 
-            VerificationToken.TokenType.PASSWORD_RESET
+                resetRequest.getEmail(),
+                VerificationToken.TokenType.PASSWORD_RESET
         );
-        
+
         if (tokenOpt.isEmpty()) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Invalid or expired reset code."));
+                    .body(new MessageResponse("Invalid or expired reset code."));
         }
-        
+
         VerificationToken token = tokenOpt.get();
-        
+
         if (!token.getCode().equals(resetRequest.getCode()) || token.isExpired() || token.isUsed()) {
             return ResponseEntity.badRequest()
-                .body(new MessageResponse("Invalid or expired reset code."));
+                    .body(new MessageResponse("Invalid or expired reset code."));
         }
-        
+
         User user = token.getUser();
-        
+
         // Update password
         user.setPassword(encoder.encode(resetRequest.getNewPassword()));
         userRepository.save(user);
-        
+
         // Mark token as used
         tokenService.consumeToken(token);
-        
+
         return ResponseEntity.ok(new MessageResponse("Password reset successfully! You can now log in with your new password."));
     }
 }

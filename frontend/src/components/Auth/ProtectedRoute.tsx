@@ -22,39 +22,33 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const user = useAppSelector(selectUser);
 
   useEffect(() => {
-    // If user is authenticated but user data is not loaded, fetch it
-    if (isAuthenticated && !user && !isLoading) {
+    if (isAuthenticated && !user) {
       dispatch(getCurrentUser());
     }
-  }, [isAuthenticated, user, isLoading, dispatch]);
+  }, [isAuthenticated, user, dispatch]);
 
-  // Show loading spinner while checking authentication
   if (isLoading || (isAuthenticated && !user)) {
     return (
-      <Box 
-        display="flex" 
-        justifyContent="center" 
-        alignItems="center" 
-        minHeight="100vh"
-        className="animate-fade-in"
-      >
-        <CircularProgress size={40} />
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+        <CircularProgress />
       </Box>
     );
   }
 
-  // If not authenticated, redirect to login
   if (!isAuthenticated) {
     return <Navigate to={fallbackPath} state={{ from: location }} replace />;
   }
 
-  // Check role-based access
+  // Add check for enabled user
+  if (user && !user.enabled) {
+    return <Navigate to="/verify-email" state={{ from: location, email: user.email }} replace />;
+  }
+  
   if (requiredRoles.length > 0 && user) {
     const userRoles = user.roles.map(role => role.name);
     const hasRequiredRole = requiredRoles.some(role => userRoles.includes(role as any));
     
     if (!hasRequiredRole) {
-      // Redirect to unauthorized page or dashboard based on user role
       const redirectPath = userRoles.includes('ADMIN') ? '/admin/dashboard' : '/dashboard';
       return <Navigate to={redirectPath} replace />;
     }

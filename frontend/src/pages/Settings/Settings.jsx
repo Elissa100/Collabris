@@ -6,7 +6,6 @@ import {
   CardContent,
   Typography,
   Switch,
-  FormControlLabel,
   Divider,
   Box,
   Button,
@@ -20,21 +19,23 @@ import {
   DarkMode,
   Notifications,
   Security,
-  Language,
   Storage,
   Delete,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import Layout from '../../components/Layout/Layout';
-import { toggleDarkMode } from '../../store/slices/themeSlice';
+// CORRECTED IMPORT: Renamed 'toggleDarkMode' to 'toggleTheme' and added selector
+import { toggleTheme, selectEffectiveTheme } from '../../store/slices/themeSlice';
 
 const Settings = () => {
   const dispatch = useDispatch();
-  const { darkMode } = useSelector((state) => state.theme);
+  // CORRECTED STATE SELECTION: Used the correct selector
+  const effectiveTheme = useSelector(selectEffectiveTheme);
   const { user } = useSelector((state) => state.auth);
 
   const handleThemeToggle = () => {
-    dispatch(toggleDarkMode());
+    // CORRECTED DISPATCH: Called the correct action
+    dispatch(toggleTheme());
   };
 
   const settingsCategories = [
@@ -47,7 +48,8 @@ const Settings = () => {
           description: 'Toggle between light and dark theme',
           control: (
             <Switch
-              checked={darkMode}
+              // CORRECTED LOGIC: Checked against the effective theme string
+              checked={effectiveTheme === 'dark'}
               onChange={handleThemeToggle}
               color="primary"
             />

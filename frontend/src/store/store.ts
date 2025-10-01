@@ -3,23 +3,18 @@ import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
 import authReducer from './slices/authSlice';
 import themeReducer from './slices/themeSlice';
 import uiReducer from './slices/uiSlice';
+import userReducer from './slices/userSlice'; // Import the new reducer
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     theme: themeReducer,
     ui: uiReducer,
+    user: userReducer, // Add the user reducer to the store
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: {
-        // Ignore these action types
-        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
-        // Ignore these field paths in all actions
-        ignoredActionsPaths: ['meta.arg', 'payload.timestamp'],
-        // Ignore these paths in the state
-        ignoredPaths: ['items.dates'],
-      },
+      serializableCheck: false,
     }),
   devTools: process.env.NODE_ENV !== 'production',
 });

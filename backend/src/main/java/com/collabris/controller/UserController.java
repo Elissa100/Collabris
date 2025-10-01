@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,9 +21,20 @@ import java.util.List;
 @Tag(name = "User Management", description = "User management APIs")
 @SecurityRequirement(name = "bearerAuth")
 public class UserController {
-    
+
     @Autowired
     private UserService userService;
+
+    // --- NEW METHOD ADDED ---
+    @GetMapping("/me")
+    @Operation(summary = "Get current user", description = "Retrieve the currently authenticated user's details")
+    public ResponseEntity<UserResponse> getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUserName = authentication.getName();
+        UserResponse user = userService.getUserByUsername(currentUserName);
+        return ResponseEntity.ok(user);
+    }
+    // -------------------------
 
     @GetMapping
     @Operation(summary = "Get all users", description = "Retrieve all users (Admin only)")

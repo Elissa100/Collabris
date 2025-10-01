@@ -11,12 +11,19 @@ import { selectIsAuthenticated, selectUser, getCurrentUser } from './store/slice
 import './theme/customStyles.css';
 
 // Import components
-import ProtectedRoute from './components/auth/ProtectedRoute';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
 import Layout from './components/Layout/Layout';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 import Landing from './pages/Landing/Landing';
 import Dashboard from './pages/Dashboard';
+import AdminDashboard from './pages/Dashboard/AdminDashboard';
+import UserDashboard from './pages/Dashboard/UserDashboard';
+import VerifyEmail from './pages/Auth/VerifyEmail';
+import ForgotPassword from './pages/Auth/ForgotPassword';
+import ResetPassword from './pages/Auth/ResetPassword';
+import Profile from './pages/Profile/Profile';
+import Settings from './pages/Settings/Settings';
 
 const AppContent: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -26,15 +33,6 @@ const AppContent: React.FC = () => {
   const theme = createCollabrisTheme(themeMode);
 
   useEffect(() => {
-    // Initialize authentication on app start
-    const token = localStorage.getItem('token');
-    if (token && !user) {
-      dispatch(getCurrentUser());
-    }
-  }, [dispatch, user]);
-
-  useEffect(() => {
-    // Load user data if authenticated but no user data
     if (isAuthenticated && !user) {
       dispatch(getCurrentUser());
     }
@@ -49,120 +47,26 @@ const AppContent: React.FC = () => {
       <Router>
         <Routes>
           {/* Public Routes */}
-          <Route 
-            path="/" 
-            element={
-              isAuthenticated ? 
-                <Navigate to={defaultDashboard} replace /> : 
-                <Landing />
-            } 
-          />
-          <Route 
-            path="/login" 
-            element={
-              isAuthenticated ? 
-                <Navigate to={defaultDashboard} replace /> : 
-                <Login />
-            } 
-          />
-          <Route 
-            path="/register" 
-            element={
-              isAuthenticated ? 
-                <Navigate to={defaultDashboard} replace /> : 
-                <Register />
-            } 
-          />
-
+          <Route path="/" element={!isAuthenticated ? <Landing /> : <Navigate to={defaultDashboard} replace />} />
+          <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to={defaultDashboard} replace />} />
+          <Route path="/register" element={!isAuthenticated ? <Register /> : <Navigate to={defaultDashboard} replace />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
+          <Route path="/reset-password" element={<ResetPassword />} />
+          
           {/* Protected Routes */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Layout>
-                <Dashboard />
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/teams" element={
-            <ProtectedRoute>
-              <Layout>
-                <div style={{ padding: '2rem' }}>
-                  <h1>Teams Management</h1>
-                  <p>Teams page coming soon...</p>
-                </div>
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/projects" element={
-            <ProtectedRoute>
-              <Layout>
-                <div style={{ padding: '2rem' }}>
-                  <h1>Project Management</h1>
-                  <p>Projects page coming soon...</p>
-                </div>
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/chat" element={
-            <ProtectedRoute>
-              <Layout>
-                <div style={{ padding: '2rem' }}>
-                  <h1>Real-time Chat</h1>
-                  <p>Chat page coming soon...</p>
-                </div>
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <Layout>
-                <div style={{ padding: '2rem' }}>
-                  <h1>User Profile</h1>
-                  <p>Profile page coming soon...</p>
-                </div>
-              </Layout>
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <Layout>
-                <div style={{ padding: '2rem' }}>
-                  <h1>Settings</h1>
-                  <p>Settings page coming soon...</p>
-                </div>
-              </Layout>
-            </ProtectedRoute>
-          } />
+          <Route path="/dashboard" element={<ProtectedRoute><Layout><UserDashboard /></Layout></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Layout><Profile /></Layout></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
 
-          <Route path="/admin/dashboard" element={
-            <ProtectedRoute requiredRoles={['ADMIN']}>
-              <Layout>
-                <div style={{ padding: '2rem' }}>
-                  <h1>Admin Dashboard</h1>
-                  <p>Admin dashboard coming soon...</p>
-                </div>
-              </Layout>
-            </ProtectedRoute>
-          } />
+          {/* Admin Routes */}
+          <Route path="/admin/dashboard" element={<ProtectedRoute requiredRoles={['ADMIN']}><Layout><AdminDashboard /></Layout></ProtectedRoute>} />
 
           {/* Fallback route */}
-          <Route 
-            path="*" 
-            element={
-              <Navigate 
-                to={isAuthenticated ? defaultDashboard : '/'} 
-                replace 
-              />
-            } 
-          />
+          <Route path="*" element={<Navigate to={isAuthenticated ? defaultDashboard : '/'} replace />} />
         </Routes>
       </Router>
       
-      {/* Toast notifications */}
       <Toaster
         position="top-right"
         toastOptions={{
