@@ -1,6 +1,7 @@
 package com.collabris.service;
 
 import com.collabris.dto.request.TeamRequest;
+import com.collabris.dto.response.TeamResponse;
 import com.collabris.entity.Team;
 import com.collabris.entity.User;
 import com.collabris.repository.TeamRepository;
@@ -12,6 +13,8 @@ import org.springframework.stereotype.Service;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 public class TeamService {
@@ -22,84 +25,80 @@ public class TeamService {
     @Autowired
     private UserRepository userRepository;
 
-    public List<Team> getAllTeams() {
-        return teamRepository.findAll();
+    public List<TeamResponse> getAllTeams() {
+        return teamRepository.findAll().stream()
+                .map(TeamResponse::new)
+                .collect(Collectors.toList());
     }
 
-    public Team getTeamById(Long id) {
-        return teamRepository.findById(id)
+    public TeamResponse getTeamById(Long id) {
+        Team team = teamRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Team not found with id: " + id));
+        return new TeamResponse(team);
     }
 
-    public List<Team> getTeamsByOwner(User owner) {
-        return teamRepository.findByOwner(owner);
+    public List<TeamResponse> getTeamsForUser(User user) {
+        List<Team> ownedTeams = teamRepository.findByOwner(user);
+        List<Team> memberTeams = teamRepository.findByMemberId(user.getId());
+
+        return Stream.concat(ownedTeams.stream(), memberTeams.stream())
+                .distinct()
+                .map(TeamResponse::new)
+                .collect(Collectors.toList());
     }
 
-    public List<Team> getTeamsByMemberId(Long userId) {
-        return teamRepository.findByMemberId(userId);
-    }
-
-    public Team createTeam(TeamRequest teamRequest, User owner) {
+    public TeamResponse createTeam(TeamRequest teamRequest, User owner) {
         Team team = new Team(teamRequest.getName(), teamRequest.getDescription(), owner);
         
-        // Add members if provided
         if (teamRequest.getMemberIds() != null && !teamRequest.getMemberIds().isEmpty()) {
-            Set<User> members = new HashSet<>();
-            for (Long memberId : teamRequest.getMemberIds()) {
-                User member = userRepository.findById(memberId)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + memberId));
-                members.add(member);
-            }
+            Set<User> members = new HashSet<>(userRepository.findAllById(teamRequest.getMemberIds()));
             team.setMembers(members);
         }
         
-        return teamRepository.save(team);
+        Team savedTeam = teamRepository.save(team);
+        return new TeamResponse(savedTeam);
     }
 
-    public Team updateTeam(Long id, TeamRequest teamRequest) {
-        Team team = getTeamById(id);
+    public TeamResponse updateTeam(Long id, TeamRequest teamRequest) {
+        Team team = teamRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Team not found with id: " + id));
         
-        if (teamRequest.getName() != null) {
-            team.setName(teamRequest.getName());
-        }
-        if (teamRequest.getDescription() != null) {
-            team.setDescription(teamRequest.getDescription());
-        }
+        if (teamRequest.getName() != null) team.setName(teamRequest.getName());
+        if (teamRequest.getDescription() != null) team.setDescription(teamRequest.getDescription());
         
-        // Update members if provided
         if (teamRequest.getMemberIds() != null) {
-            Set<User> members = new HashSet<>();
-            for (Long memberId : teamRequest.getMemberIds()) {
-                User member = userRepository.findById(memberId)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + memberId));
-                members.add(member);
-            }
+            Set<User> members = new HashSet<>(userRepository.findAllById(teamRequest.getMemberIds()));
             team.setMembers(members);
         }
         
-        return teamRepository.save(team);
+        Team updatedTeam = teamRepository.save(team);
+        return new TeamResponse(updatedTeam);
     }
 
     public void deleteTeam(Long id) {
-        Team team = getTeamById(id);
-        teamRepository.delete(team);
+        if (!teamRepository.existsById(id)) {
+            throw new RuntimeException("Team not found with id: " + id);
+        }
+        teamRepository.deleteById(id);
     }
 
-    public Team addMemberToTeam(Long teamId, Long userId) {
-        Team team = getTeamById(teamId);
+    public TeamResponse addMemberToTeam(Long teamId, Long userId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found with id: " + teamId));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + userId));
         
         team.getMembers().add(user);
-        return teamRepository.save(team);
+        return new TeamResponse(teamRepository.save(team));
     }
 
-    public Team removeMemberFromTeam(Long teamId, Long userId) {
-        Team team = getTeamById(teamId);
+    public TeamResponse removeMemberFromTeam(Long teamId, Long userId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found with id: " + teamId));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + userId));
         
         team.getMembers().remove(user);
-        return teamRepository.save(team);
+        return new TeamResponse(teamRepository.save(team));
     }
 }
