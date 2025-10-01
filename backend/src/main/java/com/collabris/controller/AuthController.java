@@ -24,6 +24,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+// --- REQUIRED IMPORT ADDED HERE ---
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+// ----------------------------------
 
 import java.util.HashSet;
 import java.util.List;
@@ -61,8 +64,6 @@ public class AuthController {
     @Operation(summary = "Sign in user", description = "Authenticate user and return JWT token")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
-        // --- MODIFICATION START ---
-        // Check if the user exists and if their account is enabled before authenticating
         Optional<User> userOptional = userRepository.findByUsername(loginRequest.getUsername())
                 .or(() -> userRepository.findByEmail(loginRequest.getUsername()));
 
@@ -70,7 +71,6 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
                     .body(new MessageResponse("Error: Please verify your email before logging in."));
         }
-        // --- MODIFICATION END ---
 
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
@@ -111,7 +111,7 @@ public class AuthController {
 
         user.setFirstName(signUpRequest.getFirstName());
         user.setLastName(signUpRequest.getLastName());
-        user.setEnabled(false); // Explicitly set to false
+        user.setEnabled(false);
 
         Set<String> strRoles = signUpRequest.getRole();
         Set<Role> roles = new HashSet<>();
