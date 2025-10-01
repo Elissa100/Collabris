@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -34,6 +35,7 @@ public class GlobalExceptionHandler {
                 .body(new MessageResponse("Access denied: " + ex.getMessage()));
     }
 
+    // --- NEW METHOD ADDED TO HANDLE VALIDATION ERRORS ---
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
@@ -42,11 +44,19 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
+        // You might want to return a more structured response, e.g.,
+        // a map of field names to error messages. For simplicity, we'll join them.
+        String errorMessage = errors.values().stream().collect(Collectors.joining(", "));
+        
+        // For a better frontend experience, let's return the map of errors.
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
     }
+    // ---------------------------------------------------
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<MessageResponse> handleGenericException(Exception ex) {
+        // Log the exception for debugging purposes
+        // logger.error("An unexpected error occurred", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new MessageResponse("An unexpected error occurred: " + ex.getMessage()));
     }
