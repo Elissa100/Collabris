@@ -13,6 +13,7 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
+  Alert,
 } from '@mui/material';
 import {
   Person,
@@ -26,9 +27,14 @@ import {
 import { motion } from 'framer-motion';
 import Layout from '../../components/Layout/Layout';
 import StatsCard from '../../components/Common/StatsCard';
+import LoadingSpinner from '../../components/Common/LoadingSpinner'; // Make sure this is imported
+import { selectUser, selectIsLoading, selectAuthError } from '../../store/slices/authSlice';
 
 const UserDashboard = () => {
-  const { user } = useSelector((state) => state.auth);
+  const user = useSelector(selectUser);
+  // --- MODIFICATION: Get loading and error states from the auth slice ---
+  const isLoading = useSelector(selectIsLoading);
+  const authError = useSelector(selectAuthError);
 
   const recentActivities = [
     { id: 1, text: 'Joined project "Website Redesign"', time: '2 hours ago', icon: <Assignment /> },
@@ -42,6 +48,36 @@ const UserDashboard = () => {
     { id: 2, text: 'Project deadline approaching', time: '1 hour ago' },
     { id: 3, text: 'Team meeting scheduled for tomorrow', time: '2 hours ago' },
   ];
+
+  // --- MODIFICATION: Add robust loading and error handling ---
+  if (isLoading) {
+    return (
+      <Layout>
+        <LoadingSpinner message="Loading your dashboard..." />
+      </Layout>
+    );
+  }
+
+  if (authError) {
+    return (
+        <Layout>
+            <Alert severity="error">
+                <Typography fontWeight="bold">Failed to load user data.</Typography>
+                <Typography variant="body2">{authError}</Typography>
+                <Typography variant="caption" sx={{mt: 1}}>Please try refreshing the page. If the problem persists, please contact support.</Typography>
+            </Alert>
+        </Layout>
+    );
+  }
+
+  if (!user) {
+      return (
+          <Layout>
+              <Alert severity="warning">Could not find user information. Please try logging in again.</Alert>
+          </Layout>
+      );
+  }
+  // --- END MODIFICATION ---
 
   return (
     <Layout>
@@ -120,8 +156,8 @@ const UserDashboard = () => {
                     <Box mt={1}>
                       {user?.roles?.map((role) => (
                         <Chip
-                          key={role}
-                          label={role.replace('ROLE_', '')}
+                          key={role.id || role.name}
+                          label={role.name.replace('ROLE_', '')}
                           size="small"
                           color="primary"
                           variant="outlined"
@@ -138,7 +174,7 @@ const UserDashboard = () => {
                 <Box display="flex" alignItems="center">
                   <CalendarToday sx={{ mr: 1, fontSize: 20 }} />
                   <Typography variant="body2">
-                    Joined {new Date(user?.createdAt).toLocaleDateString()}
+                    Joined on {new Date(user?.createdAt).toLocaleDateString()}
                   </Typography>
                 </Box>
               </CardContent>
