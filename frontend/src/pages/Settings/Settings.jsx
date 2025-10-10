@@ -24,17 +24,14 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import Layout from '../../components/Layout/Layout';
-// CORRECTED IMPORT: Renamed 'toggleDarkMode' to 'toggleTheme' and added selector
 import { toggleTheme, selectEffectiveTheme } from '../../store/slices/themeSlice';
 
 const Settings = () => {
   const dispatch = useDispatch();
-  // CORRECTED STATE SELECTION: Used the correct selector
   const effectiveTheme = useSelector(selectEffectiveTheme);
   const { user } = useSelector((state) => state.auth);
 
   const handleThemeToggle = () => {
-    // CORRECTED DISPATCH: Called the correct action
     dispatch(toggleTheme());
   };
 
@@ -48,7 +45,6 @@ const Settings = () => {
           description: 'Toggle between light and dark theme',
           control: (
             <Switch
-              // CORRECTED LOGIC: Checked against the effective theme string
               checked={effectiveTheme === 'dark'}
               onChange={handleThemeToggle}
               color="primary"
@@ -71,11 +67,6 @@ const Settings = () => {
           description: 'Receive push notifications in browser',
           control: <Switch defaultChecked color="primary" />,
         },
-        {
-          label: 'Project Updates',
-          description: 'Get notified about project changes',
-          control: <Switch defaultChecked color="primary" />,
-        },
       ],
     },
     {
@@ -86,27 +77,6 @@ const Settings = () => {
           label: 'Two-Factor Authentication',
           description: 'Add an extra layer of security',
           control: <Button variant="outlined" size="small">Enable</Button>,
-        },
-        {
-          label: 'Profile Visibility',
-          description: 'Control who can see your profile',
-          control: <Switch defaultChecked color="primary" />,
-        },
-      ],
-    },
-    {
-      title: 'Data & Storage',
-      icon: <Storage />,
-      settings: [
-        {
-          label: 'Data Export',
-          description: 'Download your data',
-          control: <Button variant="outlined" size="small">Export</Button>,
-        },
-        {
-          label: 'Clear Cache',
-          description: 'Clear application cache',
-          control: <Button variant="outlined" size="small">Clear</Button>,
         },
       ],
     },
@@ -179,20 +149,20 @@ const Settings = () => {
                   </Box>
                   <Divider sx={{ mb: 2 }} />
                   <Alert severity="warning" sx={{ mb: 2 }}>
-                    These actions are irreversible. Please proceed with caution.
+                    This action is irreversible. Please proceed with caution.
                   </Alert>
-                  <Box display="flex" flexDirection="column" gap={2}>
+                  <Box>
                     <Box display="flex" justifyContent="space-between" alignItems="center">
                       <Box>
                         <Typography variant="body1" fontWeight="medium">
                           Delete Account
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Permanently delete your account and all associated data
+                          Permanently delete your account and all data.
                         </Typography>
                       </Box>
                       <Button variant="outlined" color="error">
-                        Delete Account
+                        Delete My Account
                       </Button>
                     </Box>
                   </Box>
