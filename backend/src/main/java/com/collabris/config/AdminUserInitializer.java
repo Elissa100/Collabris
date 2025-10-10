@@ -79,20 +79,19 @@ public class AdminUserInitializer implements CommandLineRunner {
         // Save admin user
         User savedAdmin = userRepository.save(adminUser);
 
+        // --- ENHANCED LOGGING ---
         logger.info("=================================================");
-        logger.info("ADMIN USER CREATED SUCCESSFULLY!");
+        logger.info("✅ ADMIN USER CREATED SUCCESSFULLY!");
         logger.info("=================================================");
-        logger.info("Username: {}", savedAdmin.getUsername());
-        logger.info("Email: {}", savedAdmin.getEmail());
-        logger.info("Name: {} {}", savedAdmin.getFirstName(), savedAdmin.getLastName());
-        logger.info("Role: ADMIN");
-        logger.info("Password: {} (encoded)", ADMIN_PASSWORD);
-        logger.info("User ID: {}", savedAdmin.getId());
-        logger.info("Account Status: {}", savedAdmin.isEnabled() ? "ENABLED" : "DISABLED");
-        logger.info("=================================================");
-        logger.info("You can now login with these credentials:");
-        logger.info("Email/Username: {} or {}", ADMIN_EMAIL, ADMIN_USERNAME);
-        logger.info("Password: {}", ADMIN_PASSWORD);
+        logger.info("  👤 Username: {}", savedAdmin.getUsername());
+        logger.info("  📧 Email: {}", savedAdmin.getEmail());
+        logger.info("  📛 Name: {} {}", savedAdmin.getFirstName(), savedAdmin.getLastName());
+        logger.info("  🛡️ Role: ADMIN");
+        logger.info("  🔑 Password: {} (This is the plain text password)", ADMIN_PASSWORD);
+        logger.info("  🆔 User ID: {}", savedAdmin.getId());
+        logger.info("  ✔️ Status: {}", savedAdmin.isEnabled() ? "ENABLED" : "DISABLED");
+        logger.info("-------------------------------------------------");
+        logger.info("  You can now log in with these credentials.");
         logger.info("=================================================");
     }
 }
