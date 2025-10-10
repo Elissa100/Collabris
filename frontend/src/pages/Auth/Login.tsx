@@ -19,7 +19,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useAppDispatch, useAppSelector } from '../../store/store';
-import { login, clearError, selectIsLoading, selectAuthError, selectIsAuthenticated } from '../../store/slices/authSlice';
+import { login, clearError, selectIsLoading, selectAuthError } from '../../store/slices/authSlice';
 import { showSuccessNotification } from '../../store/slices/uiSlice';
 import { LoginRequest } from '../../types';
 import '../../theme/customStyles.css';
@@ -38,7 +38,6 @@ const Login: React.FC = () => {
   
   const isLoading = useAppSelector(selectIsLoading);
   const error = useAppSelector(selectAuthError);
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
   const { control, handleSubmit, formState: { errors }, getValues } = useForm<LoginRequest>({
     resolver: yupResolver(loginSchema),
@@ -55,13 +54,11 @@ const Login: React.FC = () => {
       const from = (location.state as any)?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } catch (err: any) {
-        // --- MODIFICATION START: Corrected error handling ---
+        // --- MODIFICATION: Handle email verification error specifically ---
         if (err && err.message && err.message.includes('verify your email')) {
-            const username = getValues("username");
-            // The username could be an email, which is what the verification page needs
-            navigate('/verify-email', { state: { email: username } });
+            const usernameOrEmail = getValues("username");
+            navigate('/verify-email', { state: { email: usernameOrEmail } });
         }
-        // --- MODIFICATION END ---
     }
   };
 
@@ -72,7 +69,7 @@ const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: `linear-gradient(135deg, ${theme.palette.grey[200]} 0%, ${theme.palette.grey[400]} 100%)`,
+        background: `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.grey[200]} 100%)`,
       }}
     >
       <Card
