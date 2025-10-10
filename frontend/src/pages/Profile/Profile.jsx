@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -24,9 +24,9 @@ import {
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import Layout from '../../components/Layout/Layout';
-// CORRECTED IMPORT: Changed 'updateUser' to 'setUser'
 import { setUser } from '../../store/slices/authSlice';
 import { updateUserProfile, selectUserLoading } from '../../store/slices/userSlice';
+import { useAppDispatch } from '../../store/store'; // Import useAppDispatch
 
 const schema = yup.object({
   firstName: yup.string().required('First name is required'),
@@ -35,7 +35,7 @@ const schema = yup.object({
 });
 
 const Profile = () => {
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch(); // Use the typed dispatch
   const { user } = useSelector((state) => state.auth);
   const isLoading = useSelector(selectUserLoading);
   
@@ -49,20 +49,22 @@ const Profile = () => {
     reset,
   } = useForm({
     resolver: yupResolver(schema),
-    defaultValues: {
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      email: user?.email || '',
-    },
   });
+
+  // Set default form values when user data is available
+  useEffect(() => {
+    if (user) {
+        reset({
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+        });
+    }
+  }, [user, reset]);
+
 
   const handleEdit = () => {
     setIsEditing(true);
-    reset({
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
-        email: user?.email || '',
-    });
   };
 
   const handleCancel = () => {
@@ -75,7 +77,6 @@ const Profile = () => {
     try {
       const resultAction = await dispatch(updateUserProfile({ id: user.id, userData: data }));
       if (updateUserProfile.fulfilled.match(resultAction)) {
-        // CORRECTED DISPATCH: Changed 'updateUser' to 'setUser'
         dispatch(setUser(resultAction.payload));
         toast.success('Profile updated successfully!');
         setIsEditing(false);
@@ -152,7 +153,7 @@ const Profile = () => {
                   <Grid item xs={12} sm={6}><Typography variant="body2" color="text.secondary">Full Name</Typography><Typography>{user?.firstName} {user?.lastName}</Typography></Grid>
                   <Grid item xs={12} sm={6}><Typography variant="body2" color="text.secondary">Email Address</Typography><Typography>{user?.email}</Typography></Grid>
                   <Grid item xs={12} sm={6}><Typography variant="body2" color="text.secondary">Username</Typography><Typography>@{user?.username}</Typography></Grid>
-                  <Grid item xs={12} sm={6}><Typography variant="body2" color="text.secondary">Member Since</Typography><Typography>{new Date(user?.createdAt).toLocaleDateString()}</Typography></Grid>
+                  <Grid item xs={12} sm={6}><Typography variant="body2" color="text.secondary">Member Since</Typography><Typography>{user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</Typography></Grid>
                 </Grid>
               )}
             </CardContent></Card>
