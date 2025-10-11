@@ -1,6 +1,8 @@
+// File Path: frontend/src/pages/Dashboard/Dashboard.jsx
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { selectUser } from '../../store/slices/authSlice';
+
 import AdminDashboard from './AdminDashboard';
 import ManagerDashboard from './ManagerDashboard';
 import MemberDashboard from './MemberDashboard';
@@ -13,10 +15,12 @@ const Dashboard = () => {
         return <LoadingSpinner message="Loading user data..." />;
     }
 
-    // This extracts the role names, which will now be 'ADMIN', 'MANAGER', etc.
-    // because of the backend fix.
-    const roles = user.roles.map(role => role.name);
+    // --- THIS IS THE FIX ---
+    // The backend sends `user.roles` as an array of strings (e.g., ['ADMIN']).
+    // We can use this array directly. No .map() is needed.
+    const roles = user.roles;
 
+    // This check will now work correctly.
     if (roles.includes('ADMIN')) {
         return <AdminDashboard />;
     }
