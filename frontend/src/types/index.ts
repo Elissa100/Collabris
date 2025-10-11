@@ -1,3 +1,5 @@
+// File path: frontend/src/types/index.ts
+
 // User types
 export interface User {
   id: number;
@@ -9,13 +11,13 @@ export interface User {
   roles: Role[];
   createdAt?: string;
   updatedAt?: string;
-  enabled: boolean; // Added this property
+  enabled: boolean;
 }
 
 export interface Role {
   id: number;
-  name: 'ADMIN' | 'MANAGER' | 'MEMBER' | 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_MEMBER';
-  description?: string;
+  // FIX: Simplified to match the clean role names from the backend
+  name: 'ADMIN' | 'MANAGER' | 'MEMBER';
 }
 
 // Auth types
@@ -33,13 +35,11 @@ export interface SignupRequest {
   role?: string[];
 }
 
+// FIX: This now accurately represents the backend's JwtResponse
 export interface AuthResponse {
   token: string;
   type: string;
-  id: number;
-  username: string;
-  email: string;
-  roles: string[];
+  user: User;
 }
 
 // Team types
