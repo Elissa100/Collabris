@@ -95,7 +95,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.token = action.payload.token;
-        state.user = action.payload.user;
+        state.user = action.payload.user; 
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
@@ -127,8 +127,11 @@ export const selectUser = (state: { auth: AuthState }) => state.auth.user;
 export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
 export const selectIsLoading = (state: { auth: AuthState }) => state.auth.isLoading;
 export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
-export const selectIsAdmin = (state: { auth: AuthState }) =>
-  state.auth.user?.roles.some(role => role.name === 'ADMIN') || false;
 export const selectInitialLoad = (state: { auth: AuthState }) => state.auth.initialLoad;
+
+// --- THIS IS THE FIX ---
+// The `roles` array now contains strings, so we check the string directly.
+export const selectIsAdmin = (state: { auth: AuthState }) =>
+  state.auth.user?.roles.some(role => role === 'ADMIN') || false;
 
 export default authSlice.reducer;
