@@ -1,39 +1,25 @@
+// File Path: backend/src/main/java/com/collabris/dto/response/JwtResponse.java
 package com.collabris.dto.response;
 
+import com.collabris.entity.User;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class JwtResponse {
     private String token;
     private String type = "Bearer";
-    private Long id;
-    private String username;
-    private String email;
-    private List<String> roles;
+    private UserResponse user; // FIX: Changed to include the full UserResponse object
 
-    public JwtResponse(String accessToken, Long id, String username, String email, List<String> roles) {
+    public JwtResponse(String accessToken, User user) {
         this.token = accessToken;
-        this.id = id;
-        this.username = username;
-        this.email = email;
-        this.roles = roles;
+        this.user = new UserResponse(user); // Construct the UserResponse from the User entity
     }
 
     // Getters and Setters
     public String getToken() { return token; }
     public void setToken(String token) { this.token = token; }
-
-    public String getTokenType() { return type; }
-    public void setTokenType(String tokenType) { this.type = tokenType; }
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-
-    public List<String> getRoles() { return roles; }
-    public void setRoles(List<String> roles) { this.roles = roles; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+    public UserResponse getUser() { return user; }
+    public void setUser(UserResponse user) { this.user = user; }
 }
