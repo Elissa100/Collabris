@@ -1,4 +1,3 @@
-// File Path: backend/src/main/java/com/collabris/config/DataInitializer.java
 package com.collabris.config;
 
 import com.collabris.entity.Role;
@@ -19,11 +18,10 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         if (roleRepository.count() == 0) {
-            // FIX: Using the correct, existing enum values with "ROLE_" prefix
             roleRepository.saveAll(List.of(
-                new Role(Role.ERole.ROLE_ADMIN),
-                new Role(Role.ERole.ROLE_MANAGER),
-                new Role(Role.ERole.ROLE_MEMBER)
+                new Role(Role.ERole.ADMIN),
+                new Role(Role.ERole.MANAGER),
+                new Role(Role.ERole.MEMBER)
             ));
         }
     }
