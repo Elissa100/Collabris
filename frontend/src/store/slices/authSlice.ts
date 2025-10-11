@@ -1,5 +1,6 @@
+// File path: frontend/src/store/slices/authSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { User, AuthResponse, LoginRequest, SignupRequest } from '../../types';
+import { User, LoginRequest, SignupRequest, AuthResponse } from '../../types';
 import * as authService from '../../services/authService';
 
 interface AuthState {
@@ -8,6 +9,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  initialLoad: 'idle' | 'loading' | 'succeeded' | 'failed';
 }
 
 const getInitialState = (): AuthState => {
@@ -18,12 +20,12 @@ const getInitialState = (): AuthState => {
     isAuthenticated: !!token,
     isLoading: false,
     error: null,
+    initialLoad: 'idle',
   };
 };
 
 const initialState: AuthState = getInitialState();
 
-// Async thunks
 export const login = createAsyncThunk(
   'auth/login',
   async (credentials: LoginRequest, { rejectWithValue }) => {
@@ -32,7 +34,6 @@ export const login = createAsyncThunk(
       localStorage.setItem('token', response.token);
       return response;
     } catch (error: any) {
-      // CORRECTED ERROR HANDLING
       return rejectWithValue(error.message || 'Login failed');
     }
   }
@@ -45,7 +46,6 @@ export const signup = createAsyncThunk(
       const response = await authService.signup(userData);
       return response;
     } catch (error: any) {
-      // CORRECTED ERROR HANDLING
       return rejectWithValue(error.message || 'Registration failed');
     }
   }
@@ -54,11 +54,14 @@ export const signup = createAsyncThunk(
 export const getCurrentUser = createAsyncThunk(
   'auth/getCurrentUser',
   async (_, { rejectWithValue }) => {
+    if (!localStorage.getItem('token')) {
+      return rejectWithValue('No token found');
+    }
     try {
       const user = await authService.getCurrentUser();
       return user;
     } catch (error: any) {
-      // CORRECTED ERROR HANDLING
+      localStorage.removeItem('token');
       return rejectWithValue(error.message || 'Failed to fetch user');
     }
   }
@@ -83,69 +86,49 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Login
+      // LOGIN
       .addCase(login.pending, (state) => {
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(login.fulfilled, (state, action) => {
+      .addCase(login.fulfilled, (state, action: PayloadAction<AuthResponse>) => {
         state.isLoading = false;
         state.isAuthenticated = true;
         state.token = action.payload.token;
-        // We can construct a partial user object here, full details will be fetched by getCurrentUser
-        state.user = {
-            id: action.payload.id,
-            email: action.payload.email,
-            username: action.payload.username,
-            roles: action.payload.roles.map(r => ({ id: 0, name: r as any, enabled: true })),
-            firstName: '',
-            lastName: '',
-            enabled: true,
-        };
+        state.user = action.payload.user;
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })
-      // Signup
-      .addCase(signup.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(signup.fulfilled, (state) => {
-        state.isLoading = false;
-      })
-      .addCase(signup.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      })
-      // Get Current User
-      .addCase(getCurrentUser.pending, (state) => {
-        state.isLoading = true;
-      })
+      // SIGNUP
+      .addCase(signup.pending, (state) => { state.isLoading = true; state.error = null; })
+      .addCase(signup.fulfilled, (state) => { state.isLoading = false; })
+      .addCase(signup.rejected, (state, action) => { state.isLoading = false; state.error = action.payload as string; })
+      // GET CURRENT USER
+      .addCase(getCurrentUser.pending, (state) => { state.initialLoad = 'loading'; })
       .addCase(getCurrentUser.fulfilled, (state, action) => {
-        state.isLoading = false;
         state.isAuthenticated = true;
         state.user = action.payload;
+        state.initialLoad = 'succeeded';
       })
-      .addCase(getCurrentUser.rejected, (state, action) => {
-        state.isLoading = false;
+      .addCase(getCurrentUser.rejected, (state) => {
         state.isAuthenticated = false;
         state.token = null;
-        localStorage.removeItem('token');
-        state.error = action.payload as string;
+        state.user = null;
+        state.initialLoad = 'failed';
       });
   },
 });
 
 export const { logout, clearError, setUser } = authSlice.actions;
 
-// Selectors
 export const selectUser = (state: { auth: AuthState }) => state.auth.user;
 export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
 export const selectIsLoading = (state: { auth: AuthState }) => state.auth.isLoading;
 export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
-export const selectIsAdmin = (state: { auth: AuthState }) => 
-  state.auth.user?.roles.some(role => role.name === 'ROLE_ADMIN') || false;
+export const selectIsAdmin = (state: { auth: AuthState }) =>
+  state.auth.user?.roles.some(role => role.name === 'ADMIN') || false;
+export const selectInitialLoad = (state: { auth: AuthState }) => state.auth.initialLoad;
 
 export default authSlice.reducer;
