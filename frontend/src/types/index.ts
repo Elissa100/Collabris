@@ -8,7 +8,8 @@ export interface User {
   lastName: string;
   username?: string;
   avatar?: string;
-  roles: Role[];
+  // This is the critical fix. The API sends role names as an array of strings.
+  roles: string[];
   createdAt?: string;
   updatedAt?: string;
   enabled: boolean;
@@ -16,7 +17,6 @@ export interface User {
 
 export interface Role {
   id: number;
-  // FIX: Simplified to match the clean role names from the backend
   name: 'ADMIN' | 'MANAGER' | 'MEMBER';
 }
 
@@ -35,11 +35,10 @@ export interface SignupRequest {
   role?: string[];
 }
 
-// FIX: This now accurately represents the backend's JwtResponse
 export interface AuthResponse {
   token: string;
   type: string;
-  user: User;
+  user: User; // The full User object is nested in the login response
 }
 
 // Team types
