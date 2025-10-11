@@ -1,4 +1,3 @@
-// File Path: backend/src/main/java/com/collabris/config/AdminUserInitializer.java
 package com.collabris.config;
 
 import com.collabris.entity.Role;
@@ -49,8 +48,7 @@ public class AdminUserInitializer implements CommandLineRunner {
             return;
         }
 
-        // FIX: Using the correct enum value with "ROLE_" prefix
-        Optional<Role> adminRoleOpt = roleRepository.findByName(Role.ERole.ROLE_ADMIN);
+        Optional<Role> adminRoleOpt = roleRepository.findByName(Role.ERole.ADMIN);
         if (adminRoleOpt.isEmpty()) {
             logger.error("FATAL: ADMIN role not found. Admin user cannot be created.");
             return;
