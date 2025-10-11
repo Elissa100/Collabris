@@ -1,3 +1,4 @@
+// File Path: backend/src/main/java/com/collabris/config/AdminUserInitializer.java
 package com.collabris.config;
 
 import com.collabris.entity.Role;
@@ -11,26 +12,22 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
-
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Optional;
 
 @Component
-@Order(2) // Run after DataInitializer (which has default order 1)
+@Order(2)
 public class AdminUserInitializer implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminUserInitializer.class);
-
     @Autowired
     private UserRepository userRepository;
-
     @Autowired
     private RoleRepository roleRepository;
-
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    // Admin user credentials
     private static final String ADMIN_USERNAME = "Elissa";
     private static final String ADMIN_EMAIL = "sibomanaelissa71@gmail.com";
     private static final String ADMIN_PASSWORD = "Admin@2025";
@@ -47,51 +44,28 @@ public class AdminUserInitializer implements CommandLineRunner {
     }
 
     private void createAdminUser() {
-        // Check if admin user already exists by username or email
         if (userRepository.existsByUsername(ADMIN_USERNAME)) {
             logger.info("Admin user with username '{}' already exists. Skipping creation.", ADMIN_USERNAME);
             return;
         }
 
-        if (userRepository.existsByEmail(ADMIN_EMAIL)) {
-            logger.info("Admin user with email '{}' already exists. Skipping creation.", ADMIN_EMAIL);
+        // FIX: Using the correct enum value with "ROLE_" prefix
+        Optional<Role> adminRoleOpt = roleRepository.findByName(Role.ERole.ROLE_ADMIN);
+        if (adminRoleOpt.isEmpty()) {
+            logger.error("FATAL: ADMIN role not found. Admin user cannot be created.");
             return;
         }
 
-        // Get admin role
-        Role adminRole = roleRepository.findByName(Role.ERole.ROLE_ADMIN)
-                .orElseThrow(() -> new RuntimeException("Error: Admin Role is not found. Make sure DataInitializer runs first."));
-
-        // Create admin user
-        User adminUser = new User();
-        adminUser.setUsername(ADMIN_USERNAME);
-        adminUser.setEmail(ADMIN_EMAIL);
-        adminUser.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
+        User adminUser = new User(ADMIN_USERNAME, ADMIN_EMAIL, passwordEncoder.encode(ADMIN_PASSWORD));
         adminUser.setFirstName(ADMIN_FIRST_NAME);
         adminUser.setLastName(ADMIN_LAST_NAME);
         adminUser.setEnabled(true);
 
-        // Set admin role
         Set<Role> roles = new HashSet<>();
-        roles.add(adminRole);
+        roles.add(adminRoleOpt.get());
         adminUser.setRoles(roles);
 
-        // Save admin user
-        User savedAdmin = userRepository.save(adminUser);
-
-        // --- ENHANCED LOGGING ---
-        logger.info("=================================================");
-        logger.info("✅ ADMIN USER CREATED SUCCESSFULLY!");
-        logger.info("=================================================");
-        logger.info("  👤 Username: {}", savedAdmin.getUsername());
-        logger.info("  📧 Email: {}", savedAdmin.getEmail());
-        logger.info("  📛 Name: {} {}", savedAdmin.getFirstName(), savedAdmin.getLastName());
-        logger.info("  🛡️ Role: ADMIN");
-        logger.info("  🔑 Password: {} (This is the plain text password)", ADMIN_PASSWORD);
-        logger.info("  🆔 User ID: {}", savedAdmin.getId());
-        logger.info("  ✔️ Status: {}", savedAdmin.isEnabled() ? "ENABLED" : "DISABLED");
-        logger.info("-------------------------------------------------");
-        logger.info("  You can now log in with these credentials.");
-        logger.info("=================================================");
+        userRepository.save(adminUser);
+        logger.info("Admin user '{}' created successfully.", ADMIN_USERNAME);
     }
 }
