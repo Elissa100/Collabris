@@ -1,3 +1,4 @@
+// File Path: backend/src/main/java/com/collabris/entity/Role.java
 package com.collabris.entity;
 
 import jakarta.persistence.*;
@@ -10,7 +11,7 @@ public class Role {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(length = 50, unique = true, nullable = false)
     private ERole name;
 
     public Role() {}
@@ -19,16 +20,15 @@ public class Role {
         this.name = name;
     }
 
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-
     public ERole getName() { return name; }
     public void setName(ERole name) { this.name = name; }
 
     public enum ERole {
-        ROLE_ADMIN,
-        ROLE_MANAGER,
-        ROLE_MEMBER
+        // FIX: Clean enum names. This is the final and correct version.
+        ADMIN,
+        MANAGER,
+        MEMBER
     }
 }
