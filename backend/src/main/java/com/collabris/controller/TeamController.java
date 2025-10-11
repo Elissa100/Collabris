@@ -3,90 +3,66 @@ package com.collabris.controller;
 import com.collabris.dto.request.TeamRequest;
 import com.collabris.dto.response.TeamResponse;
 import com.collabris.entity.User;
-import com.collabris.repository.UserRepository;
 import com.collabris.service.TeamService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
+import com.collabris.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
 @RequestMapping("/api/teams")
-@Tag(name = "Team Management", description = "Team management APIs")
-@SecurityRequirement(name = "bearerAuth")
 public class TeamController {
-    
+
     @Autowired
     private TeamService teamService;
-    
     @Autowired
-    private UserRepository userRepository;
-
-    @GetMapping
-    @Operation(summary = "Get all teams", description = "Retrieve all teams")
-    public ResponseEntity<List<TeamResponse>> getAllTeams() {
-        List<TeamResponse> teams = teamService.getAllTeams();
-        return ResponseEntity.ok(teams);
-    }
-
-    @GetMapping("/{id}")
-    @Operation(summary = "Get team by ID", description = "Retrieve team by ID")
-    public ResponseEntity<TeamResponse> getTeamById(@PathVariable Long id) {
-        TeamResponse team = teamService.getTeamById(id);
-        return ResponseEntity.ok(team);
-    }
-
-    @GetMapping("/my-teams")
-    @Operation(summary = "Get user's teams", description = "Get teams the current user is a member of")
-    public ResponseEntity<List<TeamResponse>> getMyTeams(Authentication authentication) {
-        User user = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        List<TeamResponse> teams = teamService.getTeamsForUser(user);
-        return ResponseEntity.ok(teams);
+    private UserService userService;
+    
+    private User getCurrentUser(UserDetails userDetails) {
+        return userService.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Error: Authenticated user not found in database."));
     }
 
     @PostMapping
-    @Operation(summary = "Create team", description = "Create a new team")
-    public ResponseEntity<TeamResponse> createTeam(@Valid @RequestBody TeamRequest teamRequest, 
-                                          Authentication authentication) {
-        User owner = userRepository.findByUsername(authentication.getName())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        TeamResponse team = teamService.createTeam(teamRequest, owner);
+    public ResponseEntity<TeamResponse> createTeam(@RequestBody TeamRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        TeamResponse createdTeam = teamService.createTeam(request, getCurrentUser(userDetails));
+        return ResponseEntity.ok(createdTeam);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<TeamResponse>> getAllTeams(@AuthenticationPrincipal UserDetails userDetails) {
+        List<TeamResponse> teams = teamService.getTeamsForUser(getCurrentUser(userDetails));
+        return ResponseEntity.ok(teams);
+    }
+
+    @GetMapping("/{teamId}")
+    public ResponseEntity<TeamResponse> getTeamById(@PathVariable Long teamId) {
+        TeamResponse team = teamService.getTeamById(teamId);
         return ResponseEntity.ok(team);
     }
 
-    @PutMapping("/{id}")
-    @Operation(summary = "Update team", description = "Update team information")
-    public ResponseEntity<TeamResponse> updateTeam(@PathVariable Long id, 
-                                          @Valid @RequestBody TeamRequest teamRequest) {
-        TeamResponse team = teamService.updateTeam(id, teamRequest);
-        return ResponseEntity.ok(team);
+    @PutMapping("/{teamId}")
+    public ResponseEntity<TeamResponse> updateTeam(@PathVariable Long teamId, @RequestBody TeamRequest request) {
+        TeamResponse updatedTeam = teamService.updateTeam(teamId, request);
+        return ResponseEntity.ok(updatedTeam);
     }
 
-    @DeleteMapping("/{id}")
-    @Operation(summary = "Delete team", description = "Delete team")
-    public ResponseEntity<?> deleteTeam(@PathVariable Long id) {
-        teamService.deleteTeam(id);
-        return ResponseEntity.ok().build();
+    @DeleteMapping("/{teamId}")
+    public ResponseEntity<Void> deleteTeam(@PathVariable Long teamId) {
+        teamService.deleteTeam(teamId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{teamId}/members/{userId}")
-    @Operation(summary = "Add member to team", description = "Add a member to team")
     public ResponseEntity<TeamResponse> addMemberToTeam(@PathVariable Long teamId, @PathVariable Long userId) {
         TeamResponse team = teamService.addMemberToTeam(teamId, userId);
         return ResponseEntity.ok(team);
     }
 
     @DeleteMapping("/{teamId}/members/{userId}")
-    @Operation(summary = "Remove member from team", description = "Remove a member from team")
     public ResponseEntity<TeamResponse> removeMemberFromTeam(@PathVariable Long teamId, @PathVariable Long userId) {
         TeamResponse team = teamService.removeMemberFromTeam(teamId, userId);
         return ResponseEntity.ok(team);
