@@ -1,11 +1,13 @@
-// frontend/src/App.tsx
+// File path: frontend/src/App.tsx
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
-import { ThemeProvider, Box, CssBaseline } from '@mui/material';
+import { ThemeProvider, Box } from '@mui/material';
+import CssBaseline from '@mui/material/CssBaseline';
 import { store, useAppDispatch, useAppSelector } from './store/store';
 import { useTheme } from './hooks/useTheme';
+
 import { getCurrentUser, selectInitialLoad, selectIsAuthenticated } from './store/slices/authSlice';
 
 // Pages
@@ -17,100 +19,63 @@ import Profile from './pages/Profile/Profile';
 import Settings from './pages/Settings/Settings';
 import VerifyEmail from './pages/Auth/VerifyEmail';
 import ProjectsPage from './pages/Projects/ProjectsPage';
+import ProjectDetailPage from './pages/Projects/ProjectDetailPage'; // <-- 1. IMPORT THE NEW PAGE
 
 // Components
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import LoadingSpinner from './components/Common/LoadingSpinner';
 
 const InitialLoadingScreen = () => (
-  <Box
-    sx={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      height: '100vh',
-    }}
-  >
-    <LoadingSpinner message="Initializing Application..." />
-  </Box>
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <LoadingSpinner message="Initializing Application..." />
+    </Box>
 );
 
 const AppContent = () => {
-  const dispatch = useAppDispatch();
-  const initialLoad = useAppSelector(selectInitialLoad);
-  const isAuthenticated = useAppSelector(selectIsAuthenticated);
-  const [theme] = useTheme(); // ✅ returns actual MUI theme object
+    const dispatch = useAppDispatch();
+    const initialLoad = useAppSelector(selectInitialLoad);
+    const isAuthenticated = useAppSelector(selectIsAuthenticated);
+    const [theme] = useTheme();
 
-  useEffect(() => {
-    dispatch(getCurrentUser());
-  }, [dispatch]);
+    useEffect(() => {
+        dispatch(getCurrentUser());
+    }, [dispatch]);
+    
+    if (initialLoad === 'idle' || initialLoad === 'loading') {
+        return <InitialLoadingScreen />;
+    }
 
-  if (initialLoad === 'idle' || initialLoad === 'loading') {
-    return <InitialLoadingScreen />;
-  }
+    return (
+        <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <Toaster position="bottom-right" reverseOrder={false} />
+            <Router>
+                <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
+                    
+                    {/* Protected Routes */}
+                    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                    <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
 
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <Toaster position="bottom-right" reverseOrder={false} />
-
-      <Router>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-
-          {/* Protected routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <Settings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/projects"
-            element={
-              <ProtectedRoute>
-                <ProjectsPage />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Redirect unknown routes */}
-          <Route
-            path="*"
-            element={<Navigate to={isAuthenticated ? '/dashboard' : '/'} />}
-          />
-        </Routes>
-      </Router>
-    </ThemeProvider>
-  );
+                    {/* --- 2. ADD THE NEW DYNAMIC ROUTE FOR PROJECT DETAILS --- */}
+                    <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
+                    
+                    <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} />} />
+                </Routes>
+            </Router>
+        </ThemeProvider>
+    );
 };
 
 const App = () => (
-  <Provider store={store}>
-    <AppContent />
-  </Provider>
+    <Provider store={store}>
+        <AppContent />
+    </Provider>
 );
 
 export default App;
