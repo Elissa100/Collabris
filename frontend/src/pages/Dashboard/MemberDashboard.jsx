@@ -1,47 +1,49 @@
-import React from 'react';
+// File path: frontend/src/pages/Dashboard/MemberDashboard.jsx
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import {
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Avatar,
-  Chip,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Divider,
-} from '@mui/material';
-import {
-  Assignment,
-  Group,
-  TrendingUp,
-} from '@mui/icons-material';
+import { Grid, Card, CardContent, Typography, Box } from '@mui/material';
+import { Assignment, Group, TrendingUp } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-
 import Layout from '../../components/Layout/Layout';
 import StatsCard from '../../components/Common/StatsCard';
 import { selectUser } from '../../store/slices/authSlice';
+import { getMemberDashboardStats } from '../../services/dashboardService';
+import LoadingSpinner from '../../components/Common/LoadingSpinner';
 
-// Mock Data for Charts - This will later come from the backend/Redux store
-const myTasksData = [
-  { name: 'To Do', value: 8 },
-  { name: 'In Progress', value: 4 },
-  { name: 'Done', value: 12 },
-];
+// Mock Data for Charts
+const myTasksData = [ { name: 'To Do', value: 8 }, { name: 'In Progress', value: 4 }, { name: 'Done', value: 12 }, ];
 const COLORS = ['#FFBB28', '#00C49F', '#0088FE'];
-
-const myProjectsData = [
-    { name: 'Website Redesign', progress: 75 },
-    { name: 'Mobile App', progress: 40 },
-    { name: 'API Integration', progress: 90 },
-];
+const myProjectsData = [ { name: 'Website Redesign', progress: 75 }, { name: 'Mobile App', progress: 40 }, { name: 'API Integration', progress: 90 }, ];
 
 const MemberDashboard = () => {
     const user = useSelector(selectUser);
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                setLoading(true);
+                const data = await getMemberDashboardStats();
+                setStats(data);
+            } catch (error) {
+                console.error("Failed to fetch member stats:", error);
+                setStats({ myProjects: 'Error', myTeams: 'Error', myTasksDue: 'Error' });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    if (loading || !stats) {
+        return (
+            <Layout>
+                <LoadingSpinner message="Loading Your Dashboard..." />
+            </Layout>
+        );
+    }
 
     return (
         <Layout>
@@ -54,12 +56,12 @@ const MemberDashboard = () => {
                 </Typography>
 
                 <Grid container spacing={3}>
-                    {/* Stats Cards */}
-                    <Grid item xs={12} sm={4}><StatsCard title="My Active Projects" value="3" icon={<Assignment />} color="primary" /></Grid>
-                    <Grid item xs={12} sm={4}><StatsCard title="My Teams" value="2" icon={<Group />} color="secondary" /></Grid>
-                    <Grid item xs={12} sm={4}><StatsCard title="My Tasks Due" value="8" icon={<TrendingUp />} color="success" /></Grid>
+                    {/* Stats Cards - Now display live data */}
+                    <Grid item xs={12} sm={4}><StatsCard title="My Active Projects" value={stats.myProjects} icon={<Assignment />} color="primary" /></Grid>
+                    <Grid item xs={12} sm={4}><StatsCard title="My Teams" value={stats.myTeams} icon={<Group />} color="secondary" /></Grid>
+                    <Grid item xs={12} sm={4}><StatsCard title="My Tasks Due" value={stats.myTasksDue} icon={<TrendingUp />} color="success" /></Grid>
 
-                    {/* Charts */}
+                    {/* Charts (still using mock data) */}
                     <Grid item xs={12} md={7}>
                         <Card sx={{ height: '100%' }}>
                             <CardContent>
