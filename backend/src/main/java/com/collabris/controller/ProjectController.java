@@ -13,7 +13,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -30,31 +29,31 @@ public class ProjectController {
     }
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()") // Any authenticated user can create a project
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProjectResponse> createProject(@RequestBody ProjectRequest request, @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(new ProjectResponse(projectService.createProject(request, getCurrentUser(userDetails))));
+        // FIX: Service now returns the correct DTO
+        return ResponseEntity.ok(projectService.createProject(request, getCurrentUser(userDetails)));
     }
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ProjectResponse>> getAllForCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        List<ProjectResponse> projects = projectService.getProjectsByMemberId(getCurrentUser(userDetails).getId())
-                .stream()
-                .map(ProjectResponse::new)
-                .collect(Collectors.toList());
-        return ResponseEntity.ok(projects);
+        // FIX: Service now returns the correct DTO
+        return ResponseEntity.ok(projectService.getProjectsByMemberId(getCurrentUser(userDetails).getId()));
     }
 
     @GetMapping("/{projectId}")
-    @PreAuthorize("isAuthenticated()") // In a real app, you'd add a check to see if user is a member
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId) {
-        return ResponseEntity.ok(new ProjectResponse(projectService.getProjectById(projectId)));
+        // FIX: Service now returns the correct DTO
+        return ResponseEntity.ok(projectService.getProjectById(projectId));
     }
 
     @PutMapping("/{projectId}")
     @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
     public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long projectId, @RequestBody ProjectRequest request) {
-        return ResponseEntity.ok(new ProjectResponse(projectService.updateProject(projectId, request)));
+        // FIX: Service now returns the correct DTO
+        return ResponseEntity.ok(projectService.updateProject(projectId, request));
     }
 
     @DeleteMapping("/{projectId}")
@@ -67,12 +66,14 @@ public class ProjectController {
     @PostMapping("/{projectId}/members/{userId}")
     @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
     public ResponseEntity<ProjectResponse> addMemberToProject(@PathVariable Long projectId, @PathVariable Long userId) {
-        return ResponseEntity.ok(new ProjectResponse(projectService.addMemberToProject(projectId, userId)));
+        // FIX: Service now returns the correct DTO
+        return ResponseEntity.ok(projectService.addMemberToProject(projectId, userId));
     }
 
     @DeleteMapping("/{projectId}/members/{userId}")
     @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
     public ResponseEntity<ProjectResponse> removeMemberFromProject(@PathVariable Long projectId, @PathVariable Long userId) {
-        return ResponseEntity.ok(new ProjectResponse(projectService.removeMemberFromProject(projectId, userId)));
+        // FIX: Service now returns the correct DTO
+        return ResponseEntity.ok(projectService.removeMemberFromProject(projectId, userId));
     }
 }
