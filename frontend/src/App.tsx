@@ -1,4 +1,4 @@
-
+// File path: frontend/src/App.tsx
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
@@ -18,6 +18,7 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import Profile from './pages/Profile/Profile';
 import Settings from './pages/Settings/Settings';
 import VerifyEmail from './pages/Auth/VerifyEmail';
+import ProjectsPage from './pages/Projects/ProjectsPage'; // <-- 1. IMPORT THE NEW PAGE
 
 // Components
 import ProtectedRoute from './components/Auth/ProtectedRoute';
@@ -33,10 +34,6 @@ const AppContent = () => {
     const dispatch = useAppDispatch();
     const initialLoad = useAppSelector(selectInitialLoad);
     const isAuthenticated = useAppSelector(selectIsAuthenticated);
-    
-    // --- THIS IS THE FIX ---
-    // The useTheme hook returns an array like [themeObject, themeModeString].
-    // We only need the first item (the theme object) for the ThemeProvider.
     const [theme] = useTheme();
 
     useEffect(() => {
@@ -48,7 +45,7 @@ const AppContent = () => {
     }
 
     return (
-        <ThemeProvider theme={theme}> {/* Now passing the correct object */}
+        <ThemeProvider theme={theme}>
             <CssBaseline />
             <Toaster position="bottom-right" reverseOrder={false} />
             <Router>
@@ -57,9 +54,15 @@ const AppContent = () => {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/verify-email" element={<VerifyEmail />} />
+                    
+                    {/* Protected Routes */}
                     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+
+                    {/* --- 2. ADD THE NEW PROTECTED ROUTE FOR PROJECTS --- */}
+                    <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
+                    
                     <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} />} />
                 </Routes>
             </Router>
