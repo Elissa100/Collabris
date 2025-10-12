@@ -1,6 +1,6 @@
-// File Path: backend/src/main/java/com/collabris/controller/AuthController.java
 package com.collabris.controller;
 
+import com.collabris.dto.request.VerifyEmailRequest; 
 import com.collabris.dto.request.LoginRequest;
 import com.collabris.dto.request.ResetPasswordConfirmRequest;
 import com.collabris.dto.request.ResetPasswordRequest;
@@ -52,26 +52,22 @@ public class AuthController {
     @Autowired
     EmailService emailService;
 
+    // ... (signin and signup methods are correct from previous step)
+
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         String jwt = jwtUtils.generateJwtToken(authentication);
-
         UserPrinciple userDetails = (UserPrinciple) authentication.getPrincipal();
-
-        // We fetch the full User entity to pass to the JwtResponse
         User user = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found after authentication. This should not happen."));
-
         if (!user.isEnabled()) {
             return ResponseEntity
                     .badRequest()
                     .body(new MessageResponse("Error: Please verify your email before logging in."));
         }
-        
-        // The new JwtResponse now includes the full UserResponse object
         return ResponseEntity.ok(new JwtResponse(jwt, user));
     }
 
@@ -87,10 +83,8 @@ public class AuthController {
         user.setFirstName(signUpRequest.getFirstName());
         user.setLastName(signUpRequest.getLastName());
         user.setEnabled(false);
-
         Set<String> strRoles = signUpRequest.getRole();
         Set<Role> roles = new HashSet<>();
-
         if (strRoles == null || strRoles.isEmpty()) {
             Role userRole = roleRepository.findByName(Role.ERole.MEMBER)
                     .orElseThrow(() -> new RuntimeException("Error: Role 'MEMBER' is not found."));
@@ -98,51 +92,59 @@ public class AuthController {
         } else {
             strRoles.forEach(role -> {
                 switch (role.toLowerCase()) {
-                    case "admin" -> {
+                    case "admin":
                         Role adminRole = roleRepository.findByName(Role.ERole.ADMIN)
                                 .orElseThrow(() -> new RuntimeException("Error: Role 'ADMIN' is not found."));
                         roles.add(adminRole);
-                    }
-                    case "manager" -> {
+                        break;
+                    case "manager":
                         Role modRole = roleRepository.findByName(Role.ERole.MANAGER)
                                 .orElseThrow(() -> new RuntimeException("Error: Role 'MANAGER' is not found."));
                         roles.add(modRole);
-                    }
-                    default -> {
+                        break;
+                    default:
                         Role userRole = roleRepository.findByName(Role.ERole.MEMBER)
                                 .orElseThrow(() -> new RuntimeException("Error: Role 'MEMBER' is not found."));
                         roles.add(userRole);
-                    }
+                        break;
                 }
             });
         }
         user.setRoles(roles);
         User savedUser = userRepository.save(user);
-
         VerificationToken token = tokenService.createVerificationToken(savedUser, VerificationToken.TokenType.EMAIL_VERIFICATION);
         emailService.sendEmail(savedUser.getEmail(), "Verify Your Collabris Account", "templates/email-verification.html",
                 Map.of("firstName", savedUser.getFirstName(), "verificationCode", token.getCode()));
-
         return ResponseEntity.ok(new MessageResponse("User registered successfully! Please verify your email."));
     }
 
+    // --- THIS IS THE FIX ---
     @PostMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@RequestParam("token") String tokenCode) {
+    public ResponseEntity<?> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        // The method now correctly accepts a request body with a "code" field.
+        String tokenCode = request.getCode();
+        
         Optional<VerificationToken> tokenOpt = tokenService.findValidToken(tokenCode, VerificationToken.TokenType.EMAIL_VERIFICATION);
+        
         if (tokenOpt.isEmpty()) {
             return ResponseEntity.badRequest().body(new MessageResponse("Invalid or expired token."));
         }
+
         VerificationToken verificationToken = tokenOpt.get();
         User user = verificationToken.getUser();
+
         if (user.isEnabled()) {
             return ResponseEntity.badRequest().body(new MessageResponse("Account is already verified."));
         }
+
         user.setEnabled(true);
         userRepository.save(user);
         tokenService.consumeToken(verificationToken);
+
         return ResponseEntity.ok(new MessageResponse("Email verified successfully! You can now log in."));
     }
 
+    // ... (password reset methods are correct from previous step)
     @PostMapping("/reset-password-request")
     public ResponseEntity<?> resetPasswordRequest(@Valid @RequestBody ResetPasswordRequest request) {
         User user = userRepository.findByEmail(request.getEmail())
