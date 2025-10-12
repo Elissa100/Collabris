@@ -1,4 +1,4 @@
-// File path: backend/src/main/java/com/collabris/entity/Team.java
+// File Path: backend/src/main/java/com/collabris/entity/Team.java
 package com.collabris.entity;
 
 import jakarta.persistence.*;
@@ -37,17 +37,15 @@ public class Team {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
-
+    
+    // --- THIS IS THE FIX ---
     public void addMember(User user) {
         this.members.add(user);
-        user.getTeams().add(this);
     }
     
     public void removeMember(User user) {
         this.members.remove(user);
-        user.getTeams().remove(this);
     }
-    
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
