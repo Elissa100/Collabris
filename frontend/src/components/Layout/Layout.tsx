@@ -1,382 +1,173 @@
-import React from 'react';
+// File Path: frontend/src/components/Layout/Layout.tsx
+import React, { useState, ReactNode } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import {
-  Box,
-  Drawer,
   AppBar,
   Toolbar,
-  List,
   Typography,
-  Divider,
   IconButton,
+  Drawer,
+  List,
+  ListItemButton, // Use ListItemButton for better click handling
+  ListItemIcon,
+  ListItemText,
+  Box,
   Avatar,
   Menu,
   MenuItem,
-  useTheme,
-  useMediaQuery,
-  Badge,
-  alpha,
+  Divider,
+  CircularProgress, // Use a proper loading component
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
   People as PeopleIcon,
-  Assignment as ProjectIcon,
-  Chat as ChatIcon,
+  Assignment as AssignmentIcon,
   Settings as SettingsIcon,
-  Person as PersonIcon,
-  Logout as LogoutIcon,
-  Notifications as NotificationsIcon,
-  Brightness4 as DarkModeIcon,
-  Brightness7 as LightModeIcon,
-  AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAppSelector, useAppDispatch } from '../../store/store';
-import { selectUser, selectIsAdmin, logout } from '../../store/slices/authSlice';
-import { selectEffectiveTheme, toggleTheme } from '../../store/slices/themeSlice';
-import { toggleSidebar, selectSidebarOpen, selectMobileSidebarOpen, toggleMobileSidebar } from '../../store/slices/uiSlice';
-import NavigationItem from './NavigationItem';
+import { Link, useNavigate } from 'react-router-dom';
+import { logout, selectUser } from '../../store/slices/authSlice';
 
-const drawerWidth = 280;
+const drawerWidth = 240;
 
+// Define the type for the component's props
 interface LayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const theme = useTheme();
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const location = useLocation();
-  const dispatch = useAppDispatch();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const user = useSelector(selectUser);
+  const [mobileOpen, setMobileOpen] = useState(false);
   
-  const user = useAppSelector(selectUser);
-  const isAdmin = useAppSelector(selectIsAdmin);
-  const currentTheme = useAppSelector(selectEffectiveTheme);
-  const sidebarOpen = useAppSelector(selectSidebarOpen);
-  const mobileSidebarOpen = useAppSelector(selectMobileSidebarOpen);
-  
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  
-  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+  // Define the type for anchorEl state
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  // Define the type for the menu event
+  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
-  
-  const handleMenuClose = () => {
+
+  const handleClose = () => {
     setAnchorEl(null);
   };
-  
+
   const handleLogout = () => {
     dispatch(logout());
-    navigate('/login');
+    // Use replace: true to prevent user from going back to a protected page
+    navigate('/login', { replace: true });
+    handleClose();
   };
-  
-  const handleDrawerToggle = () => {
-    if (isMobile) {
-      dispatch(toggleMobileSidebar());
-    } else {
-      dispatch(toggleSidebar());
-    }
-  };
-  
-  const handleThemeToggle = () => {
-    dispatch(toggleTheme());
-  };
-  
-  const navigationItems = [
-    {
-      text: 'Dashboard',
-      icon: <DashboardIcon />,
-      path: '/dashboard',
-      active: location.pathname === '/dashboard',
-    },
-    {
-      text: 'Teams',
-      icon: <PeopleIcon />,
-      path: '/teams',
-      active: location.pathname.startsWith('/teams'),
-    },
-    {
-      text: 'Projects', 
-      icon: <ProjectIcon />,
-      path: '/projects',
-      active: location.pathname.startsWith('/projects'),
-    },
-    {
-      text: 'Chat',
-      icon: <ChatIcon />,
-      path: '/chat',
-      active: location.pathname.startsWith('/chat'),
-    },
-    ...(isAdmin ? [{
-      text: 'Admin Panel',
-      icon: <AdminIcon />,
-      path: '/admin/dashboard',
-      active: location.pathname.startsWith('/admin'),
-    }] : []),
+
+  const menuItems = [
+    { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'Projects', icon: <AssignmentIcon />, path: '/projects' },
+    { text: 'Teams', icon: <PeopleIcon />, path: '/teams' },
+    { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
   
-  const userMenuItems = [
-    {
-      text: 'Profile',
-      icon: <PersonIcon />,
-      onClick: () => navigate('/profile'),
-    },
-    {
-      text: 'Settings',
-      icon: <SettingsIcon />,
-      onClick: () => navigate('/settings'),
-    },
-    {
-      text: 'Logout',
-      icon: <LogoutIcon />,
-      onClick: handleLogout,
-    },
-  ];
-  
-  const drawer = (
-    <Box
-      sx={{
-        height: '100%',
-        background: theme.palette.mode === 'light' 
-          ? 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)'
-          : 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-        backdropFilter: 'blur(20px)',
-      }}
-    >
-      {/* Logo */}
-      <Box
-        sx={{
-          p: 3,
-          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-        }}
-      >
-        <Typography
-          variant="h5"
-          sx={{
-            fontWeight: 700,
-            background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
-          }}
-        >
-          Collabris
-        </Typography>
-        <Typography
-          variant="body2"
-          sx={{
-            color: theme.palette.text.secondary,
-            mt: 0.5,
-          }}
-        >
-          Collaboration Platform
-        </Typography>
+  // Bulletproof safety check. If the user is somehow not available,
+  // show a full-screen loader to prevent any rendering crashes.
+  if (!user) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+        <Typography sx={{ ml: 2 }}>Loading Session...</Typography>
       </Box>
-      
-      {/* Navigation */}
-      <List sx={{ px: 2, py: 2 }}>
-        {navigationItems.map((item) => (
-          <NavigationItem
-            key={item.text}
-            {...item}
-            onClick={() => navigate(item.path)}
-          />
+    );
+  }
+
+  const drawer = (
+    <div>
+      <Toolbar />
+      <Divider />
+      <List>
+        {menuItems.map((item) => (
+          <ListItemButton key={item.text} component={Link} to={item.path}>
+            <ListItemIcon>{item.icon}</ListItemIcon>
+            <ListItemText primary={item.text} />
+          </ListItemButton>
         ))}
       </List>
-      
-      <Divider sx={{ mx: 2, opacity: 0.1 }} />
-      
-      {/* User Info */}
-      <Box sx={{ p: 2, mt: 'auto' }}>
-        <Box
-          sx={{
-            p: 2,
-            borderRadius: 2,
-            background: alpha(theme.palette.primary.main, 0.1),
-            border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Avatar
-              sx={{
-                width: 32,
-                height: 32,
-                mr: 1.5,
-                background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-                fontSize: '0.875rem',
-              }}
-            >
-              {user?.firstName?.charAt(0) || user?.username?.charAt(0) || 'U'}
-            </Avatar>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography
-                variant="subtitle2"
-                sx={{
-                  fontWeight: 600,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {user?.firstName && user?.lastName 
-                  ? `${user.firstName} ${user.lastName}`
-                  : user?.username || 'User'
-                }
-              </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  color: theme.palette.text.secondary,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  display: 'block',
-                }}
-              >
-                {user?.roles?.[0]?.name?.replace('ROLE_', '') || 'Member'}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+    </div>
   );
-  
+
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* App Bar */}
-      <AppBar
-        position="fixed"
-        elevation={0}
-        sx={{
-          width: { md: `calc(100% - ${sidebarOpen ? drawerWidth : 0}px)` },
-          ml: { md: sidebarOpen ? `${drawerWidth}px` : 0 },
-          backgroundColor: alpha(theme.palette.background.paper, 0.8),
-          backdropFilter: 'blur(20px)',
-          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-          color: theme.palette.text.primary,
-        }}
-      >
+    <Box sx={{ display: 'flex' }}>
+      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar>
           <IconButton
             color="inherit"
+            aria-label="open drawer"
             edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2 }}
+            sx={{ mr: 2, display: { sm: 'none' } }}
           >
             <MenuIcon />
           </IconButton>
-          
-          <Typography variant="h6" noWrap sx={{ flexGrow: 1, fontWeight: 600 }}>
-            {navigationItems.find(item => item.active)?.text || 'Dashboard'}
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
+            Collabris
           </Typography>
-          
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <IconButton color="inherit" onClick={handleThemeToggle}>
-              {currentTheme === 'dark' ? <LightModeIcon /> : <DarkModeIcon />}
-            </IconButton>
-            
-            <IconButton color="inherit">
-              <Badge badgeContent={3} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
-            
-            <IconButton
-              edge="end"
-              onClick={handleProfileMenuOpen}
-              color="inherit"
-            >
-              <Avatar
-                sx={{
-                  width: 36,
-                  height: 36,
-                  background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-                  fontSize: '0.875rem',
-                }}
-              >
-                {user?.firstName?.charAt(0) || user?.username?.charAt(0) || 'U'}
+          <div>
+            <IconButton onClick={handleMenu} color="inherit">
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
+                {/* Safety check to prevent crash if username is missing */}
+                {user.username ? user.username.charAt(0).toUpperCase() : '?'}
               </Avatar>
             </IconButton>
-          </Box>
+            <Menu
+              anchorEl={anchorEl}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              keepMounted
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              open={Boolean(anchorEl)}
+              onClose={handleClose}
+            >
+              <MenuItem component={Link} to="/profile" onClick={handleClose}>Profile</MenuItem>
+              <MenuItem onClick={handleLogout}>Logout</MenuItem>
+            </Menu>
+          </div>
         </Toolbar>
       </AppBar>
-      
-      {/* Profile Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: 200,
-            borderRadius: 2,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          },
-        }}
-      >
-        {userMenuItems.map((item) => (
-          <MenuItem
-            key={item.text}
-            onClick={() => {
-              handleMenuClose();
-              item.onClick();
-            }}
-            sx={{ py: 1.5, px: 2 }}
-          >
-            <Box sx={{ mr: 2, color: 'action.active' }}>
-              {item.icon}
-            </Box>
-            {item.text}
-          </MenuItem>
-        ))}
-      </Menu>
-      
-      {/* Navigation Drawer */}
       <Box
         component="nav"
-        sx={{ width: { md: sidebarOpen ? drawerWidth : 0 }, flexShrink: { md: 0 } }}
+        sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        aria-label="mailbox folders"
       >
         <Drawer
-          variant={isMobile ? 'temporary' : 'persistent'}
-          open={isMobile ? mobileSidebarOpen : sidebarOpen}
+          variant="temporary"
+          open={mobileOpen}
           onClose={handleDrawerToggle}
-          ModalProps={{
-            keepMounted: true, // Better mobile performance
-          }}
+          ModalProps={{ keepMounted: true }}
           sx={{
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
-              border: 'none',
-              boxShadow: '4px 0 20px rgba(0,0,0,0.08)',
-            },
+            display: { xs: 'block', sm: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
           }}
         >
           {drawer}
         </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', sm: 'block' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          }}
+          open
+        >
+          {drawer}
+        </Drawer>
       </Box>
-      
-      {/* Main Content */}
       <Box
         component="main"
-        sx={{
-          flexGrow: 1,
-          width: { md: `calc(100% - ${sidebarOpen ? drawerWidth : 0}px)` },
-          minHeight: '100vh',
-          background: theme.palette.mode === 'light'
-            ? 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)'
-            : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-        }}
+        sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
       >
         <Toolbar />
-        <Box sx={{ p: { xs: 2, md: 3 } }}>
-          {children}
-        </Box>
+        {children}
       </Box>
     </Box>
   );
