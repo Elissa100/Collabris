@@ -1,69 +1,38 @@
+// File path: frontend/src/services/userService.ts
 import apiClient from './apiClient';
-import { endpoints } from '../config/environment';
-import { User, PaginationParams, PaginatedResponse } from '../types';
+import { User } from '../types';
 
-export const getAllUsers = async (params?: PaginationParams): Promise<PaginatedResponse<User>> => {
-  const queryParams = new URLSearchParams();
-  if (params?.page) queryParams.append('page', params.page.toString());
-  if (params?.size) queryParams.append('size', params.size.toString());
-  if (params?.sort) queryParams.append('sort', params.sort);
-  if (params?.direction) queryParams.append('direction', params.direction);
+// This is the shape of the data for the create/update form
+export interface AdminUserUpdateRequest {
+    id?: number;
+    username: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    password?: string;
+    enabled: boolean;
+    roles: string[];
+}
 
-  const url = `${endpoints.users.getAll}?${queryParams.toString()}`;
-  const response = await apiClient.get<PaginatedResponse<User>>(url);
-  return response;
+// Existing function to get the current user
+export const getCurrentUser = async (): Promise<User> => {
+    return await apiClient.get('/api/users/me');
 };
 
-export const getUserById = async (id: number): Promise<User> => {
-  const response = await apiClient.get<User>(endpoints.users.getById(id));
-  return response;
+// --- NEW ADMIN FUNCTIONS ---
+
+export const getAllUsers = async (): Promise<User[]> => {
+    return await apiClient.get('/api/users');
 };
 
-export const updateUser = async (id: number, userData: Partial<User>): Promise<User> => {
-  const response = await apiClient.put<User>(endpoints.users.update(id), userData);
-  return response;
+export const createUser = async (userData: AdminUserUpdateRequest): Promise<User> => {
+    return await apiClient.post('/api/users', userData);
 };
 
-export const deleteUser = async (id: number): Promise<void> => {
-  await apiClient.delete(endpoints.users.delete(id));
+export const updateUser = async (userId: number, userData: AdminUserUpdateRequest): Promise<User> => {
+    return await apiClient.put(`/api/users/${userId}`, userData);
 };
 
-export const uploadUserAvatar = async (id: number, file: File, onProgress?: (progress: number) => void): Promise<string> => {
-  const formData = new FormData();
-  formData.append('avatar', file);
-  
-  const response = await apiClient.upload(endpoints.users.uploadAvatar(id), formData, onProgress);
-  return response.avatarUrl || response.url;
-};
-
-export const searchUsers = async (query: string, params?: PaginationParams): Promise<PaginatedResponse<User>> => {
-  const queryParams = new URLSearchParams();
-  queryParams.append('q', query);
-  if (params?.page) queryParams.append('page', params.page.toString());
-  if (params?.size) queryParams.append('size', params.size.toString());
-
-  const url = `${endpoints.users.getAll}/search?${queryParams.toString()}`;
-  const response = await apiClient.get<PaginatedResponse<User>>(url);
-  return response;
-};
-
-export const getUserStats = async (): Promise<{
-  totalUsers: number;
-  activeUsers: number;
-  newUsersThisMonth: number;
-  usersByRole: { role: string; count: number }[];
-}> => {
-  const response = await apiClient.get('/api/users/stats');
-  return response;
-};
-
-export const bulkUpdateUsers = async (userIds: number[], updates: Partial<User>): Promise<void> => {
-  await apiClient.put('/api/users/bulk', { userIds, updates });
-};
-
-export const exportUsers = async (format: 'csv' | 'xlsx'): Promise<Blob> => {
-  const response = await apiClient.get(`/api/users/export?format=${format}`, {
-    responseType: 'blob',
-  });
-  return response;
+export const deleteUser = async (userId: number): Promise<any> => {
+    return await apiClient.delete(`/api/users/${userId}`);
 };
