@@ -1,7 +1,7 @@
+// File path: backend/src/main/java/com/collabris/dto/response/ProjectResponse.java
 package com.collabris.dto.response;
 
 import com.collabris.entity.Project;
-
 import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -10,40 +10,36 @@ public class ProjectResponse {
     private Long id;
     private String name;
     private String description;
-    private Project.ProjectStatus status;
     private UserResponse owner;
-    private Long teamId; // Sending teamId is simpler than the full Team object
     private Set<UserResponse> members;
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
     private LocalDateTime createdAt;
-
+    
     public ProjectResponse(Project project) {
         this.id = project.getId();
         this.name = project.getName();
         this.description = project.getDescription();
-        this.status = project.getStatus();
-        this.owner = new UserResponse(project.getOwner());
-        if (project.getTeam() != null) {
-            this.teamId = project.getTeam().getId();
+        if(project.getOwner() != null) {
+            this.owner = new UserResponse(project.getOwner());
         }
-        this.members = project.getMembers().stream()
+        if(project.getMembers() != null) {
+            this.members = project.getMembers().stream()
                 .map(UserResponse::new)
                 .collect(Collectors.toSet());
-        this.startDate = project.getStartDate();
-        this.endDate = project.getEndDate();
+        }
         this.createdAt = project.getCreatedAt();
     }
 
-    // Getters for all fields
+    // Getters and Setters
     public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
     public String getDescription() { return description; }
-    public Project.ProjectStatus getStatus() { return status; }
+    public void setDescription(String description) { this.description = description; }
     public UserResponse getOwner() { return owner; }
-    public Long getTeamId() { return teamId; }
+    public void setOwner(UserResponse owner) { this.owner = owner; }
     public Set<UserResponse> getMembers() { return members; }
-    public LocalDateTime getStartDate() { return startDate; }
-    public LocalDateTime getEndDate() { return endDate; }
+    public void setMembers(Set<UserResponse> members) { this.members = members; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }
