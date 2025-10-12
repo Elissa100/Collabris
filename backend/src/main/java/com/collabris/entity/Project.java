@@ -1,4 +1,4 @@
-// File path: backend/src/main/java/com/collabris/entity/Project.java
+// File Path: backend/src/main/java/com/collabris/entity/Project.java
 package com.collabris.entity;
 
 import jakarta.persistence.*;
@@ -50,16 +50,16 @@ public class Project {
         this.updatedAt = LocalDateTime.now();
     }
     
+    // --- THIS IS THE FIX ---
     public void addMember(User user) {
         this.members.add(user);
-        user.getProjects().add(this);
     }
     
     public void removeMember(User user) {
         this.members.remove(user);
-        user.getProjects().remove(this);
     }
-    
+    // --- END OF FIX ---
+
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
