@@ -2,27 +2,24 @@
 import apiClient from './apiClient';
 import { DashboardStats, Activity } from '../types';
 
-// This function now specifically calls the admin endpoint.
-export const getAdminDashboardStats = async (): Promise<{ totalUsers: number, totalProjects: number, totalTeams: number }> => {
+// The generic type <T> in apiClient.get<T> tells the client what shape the "data" property will have.
+// The client then returns that data directly.
+
+export const getAdminDashboardStats = async (): Promise<{ totalUsers: number, totalProjects: number, totalTeams: number, roleDistribution: any[], userGrowth: any[] }> => {
+  // FIX: The apiClient returns the data directly. We do not need to access a .data property.
   const response = await apiClient.get('/api/dashboard/admin');
   return response;
 };
 
-// New function for the manager dashboard
 export const getManagerDashboardStats = async (): Promise<{ totalProjects: number, totalTeams: number, tasksCompletedThisWeek: number }> => {
   const response = await apiClient.get('/api/dashboard/manager');
   return response;
 };
 
-// New function for the member dashboard
 export const getMemberDashboardStats = async (): Promise<{ myProjects: number, myTeams: number, myTasksDue: number }> => {
   const response = await apiClient.get('/api/dashboard/member');
   return response;
 };
-
-
-// The rest of these functions are good placeholders for future features.
-// No changes are needed below this line.
 
 export const getDashboardStats = async (): Promise<DashboardStats> => {
   const response = await apiClient.get<DashboardStats>('/api/dashboard/stats');
@@ -44,82 +41,5 @@ export const getSystemHealth = async (): Promise<{
   requestsPerMinute: number;
 }> => {
   const response = await apiClient.get('/api/dashboard/system/health');
-  return response;
-};
-
-export const getAnalytics = async (timeRange: '7d' | '30d' | '90d' | '1y' = '30d'): Promise<{
-  userGrowth: { date: string; count: number }[];
-  projectProgress: { date: string; completed: number; created: number }[];
-  teamActivity: { date: string; messages: number; tasks: number }[];
-  systemUsage: { date: string; activeUsers: number; requests: number }[];
-}> => {
-  const response = await apiClient.get(`/api/dashboard/analytics?range=${timeRange}`);
-  return response;
-};
-
-export const getUserPerformance = async (userId?: number): Promise<{
-  tasksCompleted: number;
-  averageCompletionTime: number;
-  projectsContributed: number;
-  messagesPosted: number;
-  performanceScore: number;
-  productivityTrend: { date: string; score: number }[];
-}> => {
-  const url = userId ? `/api/dashboard/performance/${userId}` : '/api/dashboard/performance/me';
-  const response = await apiClient.get(url);
-  return response;
-};
-
-export const getTeamPerformance = async (teamId: number): Promise<{
-  teamId: number;
-  teamName: string;
-  totalMembers: number;
-  activeMembers: number;
-  projectsCompleted: number;
-  averageProjectDuration: number;
-  teamProductivity: number;
-  memberPerformance: {
-    userId: number;
-    name: string;
-    productivity: number;
-    tasksCompleted: number;
-  }[];
-}> => {
-  const response = await apiClient.get(`/api/dashboard/team/${teamId}/performance`);
-  return response;
-};
-
-export const exportDashboardData = async (type: 'stats' | 'activities' | 'analytics', format: 'csv' | 'xlsx'): Promise<Blob> => {
-  const response = await apiClient.get(`/api/dashboard/export/${type}?format=${format}`, {
-    responseType: 'blob',
-  });
-  return response;
-};
-
-export const getNotifications = async (limit: number = 5): Promise<{
-  id: number;
-  type: 'info' | 'warning' | 'error' | 'success';
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
-}[]> => {
-  const response = await apiClient.get(`/api/dashboard/notifications?limit=${limit}`);
-  return response;
-};
-
-export const markNotificationAsRead = async (notificationId: number): Promise<void> => {
-  await apiClient.patch(`/api/dashboard/notifications/${notificationId}/read`);
-};
-
-export const getUpcomingEvents = async (limit: number = 5): Promise<{
-  id: number;
-  title: string;
-  type: 'meeting' | 'deadline' | 'milestone';
-  date: string;
-  projectId?: number;
-  projectName?: string;
-}[]> => {
-  const response = await apiClient.get(`/api/dashboard/events/upcoming?limit=${limit}`);
   return response;
 };
