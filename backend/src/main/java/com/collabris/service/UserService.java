@@ -1,93 +1,50 @@
 package com.collabris.service;
 
-import com.collabris.entity.Role;
+import com.collabris.dto.response.UserResponse;
 import com.collabris.entity.User;
-import com.collabris.repository.RoleRepository;
 import com.collabris.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
 
-    private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
-    private final PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
-    public UserService(UserRepository userRepository,
-                       RoleRepository roleRepository,
-                       PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+    private SimpMessagingTemplate messagingTemplate;
 
-    public User registerNewUser(User user, Set<String> roleNames) {
-        if (userRepository.existsByUsername(user.getUsername())) {
-            throw new RuntimeException("Username already exists");
-        }
-        if (userRepository.existsByEmail(user.getEmail())) {
-            throw new RuntimeException("Email already exists");
-        }
+    public User saveUser(User user) {
+        User savedUser = userRepository.save(user);
 
-        // Encode password
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        // --- WebSocket Event ---
+        // After saving a new user, get the new total count and send a message
+        // to the "/topic/dashboard/stats" channel.
+        long totalUsers = userRepository.count();
+        messagingTemplate.convertAndSend("/topic/dashboard/stats", Map.of("totalUsers", totalUsers));
 
-        // Set roles
-        Set<Role> roles = new HashSet<>();
-        for (String roleName : roleNames) {
-            Role.ERole eRole = Role.ERole.valueOf(roleName.toUpperCase());
-            Role role = roleRepository.findByName(eRole)
-                    .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
-            roles.add(role);
-        }
-        user.setRoles(roles);
-
-        return userRepository.save(user);
+        return savedUser;
     }
 
     public Optional<User> findByUsername(String username) {
         return userRepository.findByUsername(username);
     }
 
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+    public UserResponse getUserResponseByUsername(String username) {
+        User user = findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+        return new UserResponse(user);
     }
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
-    }
-
-    public Optional<User> getUserById(Long id) {
-        return userRepository.findById(id);
-    }
-
-    public User updateUser(Long id, User updatedUser) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setFirstName(updatedUser.getFirstName());
-        user.setLastName(updatedUser.getLastName());
-        user.setEmail(updatedUser.getEmail());
-
-        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isBlank()) {
-            user.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
-        }
-
-        return userRepository.save(user);
-    }
-
-    public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new RuntimeException("User not found with id " + id);
-        }
-        userRepository.deleteById(id);
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream().map(UserResponse::new).collect(Collectors.toList());
     }
 }
