@@ -37,8 +37,7 @@ public class Team {
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
-    
-    // --- NEW HELPER METHODS ---
+
     public void addMember(User user) {
         this.members.add(user);
         user.getTeams().add(this);
@@ -48,7 +47,6 @@ public class Team {
         this.members.remove(user);
         user.getTeams().remove(this);
     }
-    // --- END NEW HELPER METHODS ---
     
     // Getters and Setters
     public Long getId() { return id; }
