@@ -1,5 +1,6 @@
 package com.collabris.repository;
 
+import com.collabris.entity.Role;
 import com.collabris.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -15,10 +16,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
     Boolean existsByUsername(String username);
     Boolean existsByEmail(String email);
-    
+
     @Query("SELECT u FROM User u WHERE u.username LIKE %:search% OR u.email LIKE %:search% OR u.firstName LIKE %:search% OR u.lastName LIKE %:search%")
     List<User> findBySearchTerm(@Param("search") String search);
-    
+
     @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :roleName")
     List<User> findByRoleName(@Param("roleName") String roleName);
+
+    // --- THIS IS THE MISSING METHOD ---
+    // This method is required by the DashboardController to count users for the pie chart.
+    long countByRoles_Name(Role.ERole roleName);
 }
