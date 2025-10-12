@@ -1,8 +1,9 @@
-// File path: frontend/src/components/Admin/UserModal.jsx
+// File Path: frontend/src/components/Admin/UserModal.jsx
 import React, { useState, useEffect } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-    Grid, FormControlLabel, Switch, FormGroup, Checkbox
+    Grid, FormControlLabel, Switch, FormGroup, Checkbox, 
+    Typography // <-- THIS IS THE FIX. Typography is now imported.
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 
@@ -11,35 +12,38 @@ const UserModal = ({ open, onClose, onSave, user }) => {
     const isEditing = !!user;
 
     useEffect(() => {
-        if (user) {
-            // If editing, populate the form with user data
-            reset({
-                username: user.username,
-                email: user.email,
-                firstName: user.firstName,
-                lastName: user.lastName,
-                enabled: user.enabled,
-                roles: {
-                    ADMIN: user.roles.includes('ADMIN'),
-                    MANAGER: user.roles.includes('MANAGER'),
-                    MEMBER: user.roles.includes('MEMBER')
-                }
-            });
-        } else {
-            // If creating, reset to default values
-            reset({
-                username: '', email: '', firstName: '', lastName: '', enabled: true,
-                roles: { ADMIN: false, MANAGER: false, MEMBER: true }
-            });
+        if (open) { // Only reset form when modal opens
+            if (user) {
+                // If editing, populate the form with user data
+                reset({
+                    username: user.username || '',
+                    email: user.email || '',
+                    firstName: user.firstName || '',
+                    lastName: user.lastName || '',
+                    enabled: user.enabled || false,
+                    roles: {
+                        ADMIN: user.roles.includes('ADMIN'),
+                        MANAGER: user.roles.includes('MANAGER'),
+                        MEMBER: user.roles.includes('MEMBER')
+                    }
+                });
+            } else {
+                // If creating, reset to default values
+                reset({
+                    username: '', email: '', firstName: '', lastName: '', 
+                    password: '', // Also clear password field
+                    enabled: true,
+                    roles: { ADMIN: false, MANAGER: false, MEMBER: true }
+                });
+            }
         }
     }, [user, open, reset]);
 
     const onSubmit = (data) => {
-        // Convert the roles object back to an array of strings
         const selectedRoles = Object.keys(data.roles).filter(role => data.roles[role]);
         const finalUserData = { ...data, roles: selectedRoles };
         
-        // Remove the roles object from the final data
+        // Remove the internal 'roles' object before sending to API
         delete finalUserData.roles;
 
         onSave(finalUserData, user?.id);
@@ -74,22 +78,23 @@ const UserModal = ({ open, onClose, onSave, user }) => {
                         <Grid item xs={12}>
                              <Controller name="password" control={control} render={({ field }) => (
                                 <TextField {...field} label="Password" type="password" fullWidth
-                                    helperText={isEditing ? "Leave blank to keep current password" : "Required"}
+                                    helperText={isEditing ? "Leave blank to keep current password" : "Required for new user"}
                                     required={!isEditing}
                                     error={!!errors.password} />
                             )} />
                         </Grid>
                         <Grid item xs={12}>
                              <Controller name="enabled" control={control} render={({ field }) => (
-                                 <FormControlLabel control={<Switch {...field} checked={field.value} />} label="User Enabled" />
+                                 <FormControlLabel control={<Switch {...field} checked={field.value || false} />} label="User Enabled" />
                             )} />
                         </Grid>
                         <Grid item xs={12}>
+                            {/* This is the line that was causing the error */}
+                            <Typography variant="subtitle2">Roles</Typography>
                             <FormGroup>
-                                <Typography variant="subtitle2">Roles</Typography>
-                                <FormControlLabel control={<Controller name="roles.MEMBER" control={control} render={({ field }) => <Checkbox {...field} checked={field.value} />} />} label="Member" />
-                                <FormControlLabel control={<Controller name="roles.MANAGER" control={control} render={({ field }) => <Checkbox {...field} checked={field.value} />} />} label="Manager" />
-                                <FormControlLabel control={<Controller name="roles.ADMIN" control={control} render={({ field }) => <Checkbox {...field} checked={field.value} />} />} label="Admin" />
+                                <FormControlLabel control={<Controller name="roles.MEMBER" control={control} render={({ field }) => <Checkbox {...field} checked={field.value || false} />} />} label="Member" />
+                                <FormControlLabel control={<Controller name="roles.MANAGER" control={control} render={({ field }) => <Checkbox {...field} checked={field.value || false} />} />} label="Manager" />
+                                <FormControlLabel control={<Controller name="roles.ADMIN" control={control} render={({ field }) => <Checkbox {...field} checked={field.value || false} />} />} label="Admin" />
                             </FormGroup>
                         </Grid>
                     </Grid>
