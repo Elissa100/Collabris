@@ -11,19 +11,23 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+
 import java.util.HashSet;
-import java.util.Set;
 import java.util.Optional;
+import java.util.Set;
 
 @Component
 @Order(2)
 public class AdminUserInitializer implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminUserInitializer.class);
+
     @Autowired
     private UserRepository userRepository;
+
     @Autowired
     private RoleRepository roleRepository;
+
     @Autowired
     private PasswordEncoder passwordEncoder;
 
@@ -34,23 +38,23 @@ public class AdminUserInitializer implements CommandLineRunner {
     private static final String ADMIN_LAST_NAME = "Sibomana";
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         try {
             createAdminUser();
         } catch (Exception e) {
-            logger.error("Error occurred while creating admin user: {}", e.getMessage(), e);
+            logger.error("❌ Error occurred while creating admin user: {}", e.getMessage(), e);
         }
     }
 
     private void createAdminUser() {
         if (userRepository.existsByUsername(ADMIN_USERNAME)) {
-            logger.info("Admin user with username '{}' already exists. Skipping creation.", ADMIN_USERNAME);
+            logger.info("⚠️  Admin user '{}' already exists. Skipping creation.", ADMIN_USERNAME);
             return;
         }
 
         Optional<Role> adminRoleOpt = roleRepository.findByName(Role.ERole.ADMIN);
         if (adminRoleOpt.isEmpty()) {
-            logger.error("FATAL: ADMIN role not found. Admin user cannot be created.");
+            logger.error("🚨 FATAL: ADMIN role not found. Admin user cannot be created.");
             return;
         }
 
@@ -64,6 +68,17 @@ public class AdminUserInitializer implements CommandLineRunner {
         adminUser.setRoles(roles);
 
         userRepository.save(adminUser);
-        logger.info("Admin user '{}' created successfully.", ADMIN_USERNAME);
+
+        logger.info("\n\n" +
+                "============================================================\n" +
+                "🎉  ADMIN ACCOUNT INITIALIZED SUCCESSFULLY\n" +
+                "------------------------------------------------------------\n" +
+                "👤 Username : {}\n" +
+                "📧 Email    : {}\n" +
+                "🔑 Password : {}\n" +
+                "------------------------------------------------------------\n" +
+                "⚡ You can now log in with this admin account.\n" +
+                "============================================================\n",
+                ADMIN_USERNAME, ADMIN_EMAIL, ADMIN_PASSWORD);
     }
 }
