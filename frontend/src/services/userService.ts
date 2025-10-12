@@ -2,7 +2,6 @@
 import apiClient from './apiClient';
 import { User } from '../types';
 
-// This is the shape of the data for the create/update form
 export interface AdminUserUpdateRequest {
     id?: number;
     username: string;
@@ -14,25 +13,28 @@ export interface AdminUserUpdateRequest {
     roles: string[];
 }
 
-// Existing function to get the current user
 export const getCurrentUser = async (): Promise<User> => {
-    return await apiClient.get('/api/users/me');
+    // FIX: The apiClient returns the data directly. We do not need to access a .data property.
+    const response = await apiClient.get('/api/users/me');
+    return response;
 };
 
-// --- NEW ADMIN FUNCTIONS ---
-
 export const getAllUsers = async (): Promise<User[]> => {
-    return await apiClient.get('/api/users');
+    const response = await apiClient.get('/api/users');
+    return response;
 };
 
 export const createUser = async (userData: AdminUserUpdateRequest): Promise<User> => {
-    return await apiClient.post('/api/users', userData);
+    const response = await apiClient.post('/api/users', userData);
+    return response;
 };
 
 export const updateUser = async (userId: number, userData: AdminUserUpdateRequest): Promise<User> => {
-    return await apiClient.put(`/api/users/${userId}`, userData);
+    const response = await apiClient.put(`/api/users/${userId}`, userData);
+    return response;
 };
 
 export const deleteUser = async (userId: number): Promise<any> => {
-    return await apiClient.delete(`/api/users/${userId}`);
+    const response = await apiClient.delete(`/api/users/${userId}`);
+    return response;
 };
