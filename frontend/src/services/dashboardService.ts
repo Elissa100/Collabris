@@ -1,43 +1,31 @@
+// File path: frontend/src/services/dashboardService.ts
 import apiClient from './apiClient';
 import { DashboardStats, Activity } from '../types';
 
+// This function now specifically calls the admin endpoint.
+export const getAdminDashboardStats = async (): Promise<{ totalUsers: number, totalProjects: number, totalTeams: number }> => {
+  const response = await apiClient.get('/api/dashboard/admin');
+  return response;
+};
+
+// New function for the manager dashboard
+export const getManagerDashboardStats = async (): Promise<{ totalProjects: number, totalTeams: number, tasksCompletedThisWeek: number }> => {
+  const response = await apiClient.get('/api/dashboard/manager');
+  return response;
+};
+
+// New function for the member dashboard
+export const getMemberDashboardStats = async (): Promise<{ myProjects: number, myTeams: number, myTasksDue: number }> => {
+  const response = await apiClient.get('/api/dashboard/member');
+  return response;
+};
+
+
+// The rest of these functions are good placeholders for future features.
+// No changes are needed below this line.
+
 export const getDashboardStats = async (): Promise<DashboardStats> => {
   const response = await apiClient.get<DashboardStats>('/api/dashboard/stats');
-  return response;
-};
-
-export const getAdminDashboardStats = async (): Promise<DashboardStats & {
-  systemHealth: {
-    uptime: number;
-    memoryUsage: number;
-    cpuUsage: number;
-    diskUsage: number;
-  };
-  recentActivities: Activity[];
-  topPerformers: {
-    userId: number;
-    name: string;
-    score: number;
-  }[];
-}> => {
-  const response = await apiClient.get('/api/dashboard/admin/stats');
-  return response;
-};
-
-export const getUserDashboardStats = async (): Promise<{
-  myProjects: number;
-  myTasks: number;
-  completedTasks: number;
-  myTeams: number;
-  unreadMessages: number;
-  upcomingDeadlines: {
-    projectId: number;
-    projectName: string;
-    deadline: string;
-  }[];
-  recentActivities: Activity[];
-}> => {
-  const response = await apiClient.get('/api/dashboard/user/stats');
   return response;
 };
 
