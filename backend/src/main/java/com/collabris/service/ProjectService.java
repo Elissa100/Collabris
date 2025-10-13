@@ -7,6 +7,7 @@ import com.collabris.entity.Project;
 import com.collabris.entity.User;
 import com.collabris.repository.ProjectRepository;
 import com.collabris.repository.UserRepository;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,10 @@ public class ProjectService {
 
         Project savedProject = projectRepository.save(project);
 
+        // Force Hibernate to load the lazy collections before the session closes
+        Hibernate.initialize(savedProject.getOwner());
+        Hibernate.initialize(savedProject.getMembers());
+
         long totalProjects = projectRepository.count();
         messagingTemplate.convertAndSend("/topic/dashboard/stats", Map.of("totalProjects", totalProjects));
 
@@ -55,13 +60,20 @@ public class ProjectService {
     public ProjectResponse getProjectById(Long projectId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new NoSuchElementException("Project not found with ID: " + projectId));
+        // Force initialization before returning
+        Hibernate.initialize(project.getOwner());
+        Hibernate.initialize(project.getMembers());
         return new ProjectResponse(project);
     }
 
     public List<ProjectResponse> getProjectsByMemberId(Long userId) {
-        return projectRepository.findByMemberId(userId).stream()
-                .map(ProjectResponse::new)
-                .collect(Collectors.toList());
+        List<Project> projects = projectRepository.findByMemberId(userId);
+        // Eagerly fetch necessary data within the transaction
+        projects.forEach(p -> {
+            Hibernate.initialize(p.getOwner());
+            Hibernate.initialize(p.getMembers());
+        });
+        return projects.stream().map(ProjectResponse::new).collect(Collectors.toList());
     }
 
     @Transactional
@@ -71,6 +83,8 @@ public class ProjectService {
         project.setName(projectRequest.getName());
         project.setDescription(projectRequest.getDescription());
         Project savedProject = projectRepository.save(project);
+        Hibernate.initialize(savedProject.getOwner());
+        Hibernate.initialize(savedProject.getMembers());
         return new ProjectResponse(savedProject);
     }
 
@@ -88,7 +102,10 @@ public class ProjectService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         project.addMember(user);
-        return new ProjectResponse(projectRepository.save(project));
+        Project savedProject = projectRepository.save(project);
+        Hibernate.initialize(savedProject.getOwner());
+        Hibernate.initialize(savedProject.getMembers());
+        return new ProjectResponse(savedProject);
     }
 
     @Transactional
@@ -98,6 +115,9 @@ public class ProjectService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         project.removeMember(user);
-        return new ProjectResponse(projectRepository.save(project));
+        Project savedProject = projectRepository.save(project);
+        Hibernate.initialize(savedProject.getOwner());
+        Hibernate.initialize(savedProject.getMembers());
+        return new ProjectResponse(savedProject);
     }
 }
