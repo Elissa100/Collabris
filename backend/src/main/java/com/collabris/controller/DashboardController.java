@@ -52,8 +52,6 @@ public class DashboardController {
         long totalProjects = projectRepository.count();
         long totalTeams = teamRepository.count();
 
-        // --- NEW LOGIC FOR PIE CHART ---
-        // Count users for each role
         long adminCount = userRepository.countByRoles_Name(Role.ERole.ADMIN);
         long managerCount = userRepository.countByRoles_Name(Role.ERole.MANAGER);
         long memberCount = userRepository.countByRoles_Name(Role.ERole.MEMBER);
@@ -63,10 +61,7 @@ public class DashboardController {
             Map.of("name", "Managers", "value", managerCount),
             Map.of("name", "Members", "value", memberCount)
         );
-        // --- END OF NEW LOGIC ---
 
-        // Mock the user growth data for now, as it requires complex queries.
-        // It's dynamically calculated to show the current total users in the last month.
         List<Map<String, Object>> userGrowth = List.of(
             Map.of("name", "Jan", "users", 0), Map.of("name", "Feb", "users", 0),
             Map.of("name", "Mar", "users", 0), Map.of("name", "Apr", "users", 0),
@@ -77,8 +72,8 @@ public class DashboardController {
             "totalUsers", totalUsers,
             "totalProjects", totalProjects,
             "totalTeams", totalTeams,
-            "roleDistribution", roleDistribution, // Add new data to response
-            "userGrowth", userGrowth             // Add new data to response
+            "roleDistribution", roleDistribution,
+            "userGrowth", userGrowth
         ));
     }
 
@@ -88,12 +83,21 @@ public class DashboardController {
     public ResponseEntity<?> getManagerDashboardStats() {
         long totalProjects = projectRepository.count();
         long totalTeams = teamRepository.count();
-        long tasksCompleted = 78; // Placeholder value for demonstration
+        long tasksCompleted = 78; // Placeholder value
 
+        // --- NEW DATA FOR MANAGER CHART ---
+        // These are placeholder values. In a real app, this would query the task status.
+        List<Map<String, Object>> projectsStatusData = List.of(
+            Map.of("name", "On Track", "value", totalProjects - 2), // Mocking 2 projects as not on track
+            Map.of("name", "At Risk", "value", 1),
+            Map.of("name", "Overdue", "value", 1)
+        );
+        
         return ResponseEntity.ok(Map.of(
             "totalProjects", totalProjects,
             "totalTeams", totalTeams,
-            "tasksCompletedThisWeek", tasksCompleted
+            "tasksCompletedThisWeek", tasksCompleted,
+            "projectsStatusData", projectsStatusData // Add new chart data to response
         ));
     }
 
@@ -106,15 +110,22 @@ public class DashboardController {
             return ResponseEntity.status(401).build();
         }
         
-        // Use the existing repository methods to get counts
         long myProjectsCount = projectRepository.findByMemberId(currentUser.getId()).size();
         long myTeamsCount = teamRepository.findByMemberId(currentUser.getId()).size();
-        long myTasksDue = 8; // Placeholder value for demonstration
         
+        // --- NEW DATA FOR MEMBER CHART ---
+        // These are placeholder values for a user's personal tasks
+        List<Map<String, Object>> myTasksData = List.of(
+            Map.of("name", "To Do", "value", 8),
+            Map.of("name", "In Progress", "value", 4),
+            Map.of("name", "Done", "value", 12)
+        );
+
         return ResponseEntity.ok(Map.of(
             "myProjects", myProjectsCount,
             "myTeams", myTeamsCount,
-            "myTasksDue", myTasksDue
+            "myTasksDue", 8, // Using the "To Do" value for the StatsCard
+            "myTasksData", myTasksData // Add new chart data to response
         ));
     }
 }

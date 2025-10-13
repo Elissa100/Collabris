@@ -11,9 +11,8 @@ import { selectUser } from '../../store/slices/authSlice';
 import { getMemberDashboardStats } from '../../services/dashboardService';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
 
-// Mock Data for Charts
-const myTasksData = [ { name: 'To Do', value: 8 }, { name: 'In Progress', value: 4 }, { name: 'Done', value: 12 }, ];
-const COLORS = ['#FFBB28', '#00C49F', '#0088FE'];
+const COLORS = ['#FFBB28', '#00C49F', '#0088FE']; // To Do, In Progress, Done
+// Mock data for one chart
 const myProjectsData = [ { name: 'Website Redesign', progress: 75 }, { name: 'Mobile App', progress: 40 }, { name: 'API Integration', progress: 90 }, ];
 
 const MemberDashboard = () => {
@@ -29,7 +28,7 @@ const MemberDashboard = () => {
                 setStats(data);
             } catch (error) {
                 console.error("Failed to fetch member stats:", error);
-                setStats({ myProjects: 'Error', myTeams: 'Error', myTasksDue: 'Error' });
+                setStats({ myProjects: 'Error', myTeams: 'Error', myTasksDue: 'Error', myTasksData: [] });
             } finally {
                 setLoading(false);
             }
@@ -56,12 +55,10 @@ const MemberDashboard = () => {
                 </Typography>
 
                 <Grid container spacing={3}>
-                    {/* Stats Cards - Now display live data */}
                     <Grid item xs={12} sm={4}><StatsCard title="My Active Projects" value={stats.myProjects} icon={<Assignment />} color="primary" /></Grid>
                     <Grid item xs={12} sm={4}><StatsCard title="My Teams" value={stats.myTeams} icon={<Group />} color="secondary" /></Grid>
                     <Grid item xs={12} sm={4}><StatsCard title="My Tasks Due" value={stats.myTasksDue} icon={<TrendingUp />} color="success" /></Grid>
 
-                    {/* Charts (still using mock data) */}
                     <Grid item xs={12} md={7}>
                         <Card sx={{ height: '100%' }}>
                             <CardContent>
@@ -81,14 +78,17 @@ const MemberDashboard = () => {
                          <Card sx={{ height: '100%' }}>
                             <CardContent>
                                 <Typography variant="h6" gutterBottom>My Task Status</Typography>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <PieChart>
-                                        <Pie data={myTasksData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
-                                            {myTasksData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
-                                        </Pie>
-                                        <Tooltip />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                                {/* --- FIX: USING LIVE DATA --- */}
+                                {stats.myTasksData && (
+                                    <ResponsiveContainer width="100%" height={300}>
+                                        <PieChart>
+                                            <Pie data={stats.myTasksData} cx="50%" cy="50%" labelLine={false} outerRadius={100} fill="#8884d8" dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                                                {stats.myTasksData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
+                                            </Pie>
+                                            <Tooltip />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                )}
                             </CardContent>
                         </Card>
                     </Grid>
