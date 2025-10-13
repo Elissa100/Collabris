@@ -1,66 +1,66 @@
-// frontend/src/hooks/useWebSocket.ts
-import { useEffect, useRef } from 'react';
-import { useDispatch } from 'react-redux';
-import SockJS from 'sockjs-client';
-import { Client, IMessage, Frame, StompSubscription } from '@stomp/stompjs';
-import { updateAdminStats } from '../store/slices/dashboardSlice';
+import { useEffect, useRef, useState } from "react";
+import { Client, IMessage } from "@stomp/stompjs";
 
-interface AdminStats {
-  totalUsers?: number;
-  totalProjects?: number;
-  totalTeams?: number;
-}
-
-const useWebSocket = (): void => {
-  const dispatch = useDispatch();
+const useWebSocket = (url: string, onMessage: (msg: IMessage) => void) => {
   const clientRef = useRef<Client | null>(null);
-  const subscriptionRef = useRef<StompSubscription | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
 
   useEffect(() => {
-    const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8080/ws'),
-      debug: () => {}, // remove logs
-      reconnectDelay: 5000, // reconnect every 5s
-    });
+    const connect = () => {
+      if (clientRef.current) return; // Prevent duplicate connects
 
-    clientRef.current = client;
+      const stompClient = new Client({
+        brokerURL: url.startsWith("ws") ? url : url.replace("http", "ws"),
+        reconnectDelay: 5000,
+        onConnect: () => {
+          console.log("[WebSocket] ✅ Connected");
+          setConnected(true);
+          setRetryCount(0);
+        },
+        onDisconnect: () => {
+          console.log("[WebSocket] ❌ Disconnected");
+          setConnected(false);
+        },
+        onStompError: (frame) => {
+          console.error("[WebSocket] STOMP error:", frame.headers["message"]);
+        },
+        onWebSocketClose: () => {
+          console.log("[WebSocket] 🔌 Closed");
+          setConnected(false);
 
-    const subscribeToStats = () => {
-      if (client.connected) {
-        subscriptionRef.current = client.subscribe('/topic/dashboard/stats', (message: IMessage) => {
-          try {
-            const updatedStats: AdminStats = JSON.parse(message.body);
-            if (
-              updatedStats.totalUsers !== undefined ||
-              updatedStats.totalProjects !== undefined ||
-              updatedStats.totalTeams !== undefined
-            ) {
-              dispatch(updateAdminStats(updatedStats));
-            }
-          } catch (err) {
-            console.error('Failed to parse WebSocket message:', err);
+          if (retryCount < MAX_RETRIES) {
+            setRetryCount((r) => r + 1);
+            console.log(`[WebSocket] Reconnecting... (${retryCount + 1}/${MAX_RETRIES})`);
+            setTimeout(connect, 5000);
+          } else {
+            console.warn("[WebSocket] Reconnect attempts exceeded. Giving up.");
           }
-        });
-      }
+        },
+        onUnhandledMessage: onMessage,
+      });
+
+      stompClient.activate();
+      clientRef.current = stompClient;
     };
 
-    client.onConnect = (frame: Frame) => {
-      console.log('Connected to WebSocket:', frame);
-      subscribeToStats();
-    };
-
-    client.onStompError = (frame: Frame) => {
-      console.error('WebSocket STOMP error:', frame.body);
-    };
-
-    client.activate(); // starts the connection
+    connect();
 
     return () => {
-      if (subscriptionRef.current) subscriptionRef.current.unsubscribe();
-      client.deactivate();
-      console.log('Disconnected from WebSocket');
+      console.log("🧹 Cleaning up WebSocket...");
+      clientRef.current?.deactivate();
+      clientRef.current = null;
     };
-  }, [dispatch]);
+  }, [url, onMessage, retryCount]);
+
+  const sendMessage = (destination: string, body: any) => {
+    if (clientRef.current?.connected) {
+      clientRef.current.publish({ destination, body: JSON.stringify(body) });
+    }
+  };
+
+  return { connected, sendMessage };
 };
 
 export default useWebSocket;
