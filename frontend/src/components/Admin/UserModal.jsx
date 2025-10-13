@@ -1,9 +1,7 @@
-// File Path: frontend/src/components/Admin/UserModal.jsx
 import React, { useState, useEffect } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-    Grid, FormControlLabel, Switch, FormGroup, Checkbox, 
-    Typography // <-- THIS IS THE FIX. Typography is now imported.
+    Grid, FormControlLabel, Switch, FormGroup, Checkbox, Typography
 } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 
@@ -12,43 +10,49 @@ const UserModal = ({ open, onClose, onSave, user }) => {
     const isEditing = !!user;
 
     useEffect(() => {
-        if (open) { // Only reset form when modal opens
+        if (open) {
             if (user) {
-                // If editing, populate the form with user data
                 reset({
-                    username: user.username || '',
-                    email: user.email || '',
-                    firstName: user.firstName || '',
-                    lastName: user.lastName || '',
+                    username: user.username || '', email: user.email || '',
+                    firstName: user.firstName || '', lastName: user.lastName || '',
                     enabled: user.enabled || false,
-                    roles: {
-                        ADMIN: user.roles.includes('ADMIN'),
-                        MANAGER: user.roles.includes('MANAGER'),
-                        MEMBER: user.roles.includes('MEMBER')
-                    }
+
+                    formRoles: user.roles || [],
                 });
             } else {
-                // If creating, reset to default values
                 reset({
-                    username: '', email: '', firstName: '', lastName: '', 
-                    password: '', // Also clear password field
+                    username: '', email: '', firstName: '', lastName: '', password: '',
                     enabled: true,
-                    roles: { ADMIN: false, MANAGER: false, MEMBER: true }
+                    // Default new users to just the MEMBER role
+                    formRoles: ['MEMBER'],
                 });
             }
         }
     }, [user, open, reset]);
 
     const onSubmit = (data) => {
-        const selectedRoles = Object.keys(data.roles).filter(role => data.roles[role]);
-        const finalUserData = { ...data, roles: selectedRoles };
-        
-        // Remove the internal 'roles' object before sending to API
-        delete finalUserData.roles;
+        //  directly use the 'formRoles' from the form data now, which is an array.
+        // ensure the property name is 'roles' for the API call.
+        const finalUserData = { 
+            ...data, 
+            roles: data.formRoles 
+        };
+        delete finalUserData.formRoles; // Clean up the temporary form field
 
         onSave(finalUserData, user?.id);
     };
 
+    const handleRoleChange = (role, checked) => {
+        const currentRoles = control._formValues.formRoles || [];
+        if (checked) {
+            // Add the role if it's not already there
+            reset({ ...control._formValues, formRoles: [...new Set([...currentRoles, role])] });
+        } else {
+            // Remove the role
+            reset({ ...control._formValues, formRoles: currentRoles.filter(r => r !== role) });
+        }
+    };
+    
     return (
         <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
             <DialogTitle>{isEditing ? 'Edit User' : 'Create New User'}</DialogTitle>
@@ -56,46 +60,36 @@ const UserModal = ({ open, onClose, onSave, user }) => {
                 <DialogContent>
                     <Grid container spacing={2} sx={{ mt: 1 }}>
                         <Grid item xs={12} sm={6}>
-                            <Controller name="firstName" control={control} render={({ field }) => (
-                                <TextField {...field} label="First Name" fullWidth required error={!!errors.firstName} helperText={errors.firstName?.message} />
-                            )} />
+                            <Controller name="firstName" control={control} render={({ field }) => ( <TextField {...field} label="First Name" fullWidth required /> )}/>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <Controller name="lastName" control={control} render={({ field }) => (
-                                <TextField {...field} label="Last Name" fullWidth required error={!!errors.lastName} helperText={errors.lastName?.message} />
-                            )} />
+                            <Controller name="lastName" control={control} render={({ field }) => ( <TextField {...field} label="Last Name" fullWidth required /> )}/>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <Controller name="username" control={control} render={({ field }) => (
-                                <TextField {...field} label="Username" fullWidth required error={!!errors.username} helperText={errors.username?.message} />
-                            )} />
+                            <Controller name="username" control={control} render={({ field }) => ( <TextField {...field} label="Username" fullWidth required /> )}/>
                         </Grid>
                         <Grid item xs={12} sm={6}>
-                            <Controller name="email" control={control} render={({ field }) => (
-                                <TextField {...field} label="Email" type="email" fullWidth required error={!!errors.email} helperText={errors.email?.message} />
-                            )} />
+                            <Controller name="email" control={control} render={({ field }) => ( <TextField {...field} label="Email" type="email" fullWidth required /> )}/>
                         </Grid>
                         <Grid item xs={12}>
                              <Controller name="password" control={control} render={({ field }) => (
                                 <TextField {...field} label="Password" type="password" fullWidth
                                     helperText={isEditing ? "Leave blank to keep current password" : "Required for new user"}
-                                    required={!isEditing}
-                                    error={!!errors.password} />
+                                    required={!isEditing} />
                             )} />
                         </Grid>
                         <Grid item xs={12}>
-                             <Controller name="enabled" control={control} render={({ field }) => (
-                                 <FormControlLabel control={<Switch {...field} checked={field.value || false} />} label="User Enabled" />
-                            )} />
+                             <Controller name="enabled" control={control} defaultValue={true} render={({ field }) => ( <FormControlLabel control={<Switch {...field} checked={field.value} />} label="User Enabled" /> )}/>
                         </Grid>
                         <Grid item xs={12}>
-                            {/* This is the line that was causing the error */}
                             <Typography variant="subtitle2">Roles</Typography>
-                            <FormGroup>
-                                <FormControlLabel control={<Controller name="roles.MEMBER" control={control} render={({ field }) => <Checkbox {...field} checked={field.value || false} />} />} label="Member" />
-                                <FormControlLabel control={<Controller name="roles.MANAGER" control={control} render={({ field }) => <Checkbox {...field} checked={field.value || false} />} />} label="Manager" />
-                                <FormControlLabel control={<Controller name="roles.ADMIN" control={control} render={({ field }) => <Checkbox {...field} checked={field.value || false} />} />} label="Admin" />
-                            </FormGroup>
+                            <Controller name="formRoles" control={control} defaultValue={[]} render={({ field }) => (
+                                <FormGroup>
+                                    <FormControlLabel control={<Checkbox checked={field.value.includes('MEMBER')} onChange={(e) => handleRoleChange('MEMBER', e.target.checked)} />} label="Member" />
+                                    <FormControlLabel control={<Checkbox checked={field.value.includes('MANAGER')} onChange={(e) => handleRoleChange('MANAGER', e.target.checked)} />} label="Manager" />
+                                    <FormControlLabel control={<Checkbox checked={field.value.includes('ADMIN')} onChange={(e) => handleRoleChange('ADMIN', e.target.checked)} />} label="Admin" />
+                                </FormGroup>
+                            )} />
                         </Grid>
                     </Grid>
                 </DialogContent>
