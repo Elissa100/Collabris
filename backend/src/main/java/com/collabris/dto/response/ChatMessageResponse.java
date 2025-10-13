@@ -8,15 +8,14 @@ public class ChatMessageResponse {
     private String content;
     private LocalDateTime timestamp;
     private UserResponse sender;
-    private Long chatRoomId; 
+    private Long chatRoomId;
 
     public ChatMessageResponse(ChatMessage message) {
         this.id = message.getId();
         this.content = message.getContent();
         this.timestamp = message.getTimestamp();
         this.sender = new UserResponse(message.getSender());
-        // FIX: Use the correct method to get the ID from the associated ChatRoom
-        this.chatRoomId = message.getChatRoom().getId(); 
+        this.chatRoomId = message.getChatRoom().getId();
     }
 
     // Getters and Setters
