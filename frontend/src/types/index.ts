@@ -1,4 +1,6 @@
+// File path: frontend/src/types/index.ts
 
+// --- USER & AUTH TYPES ---
 export interface User {
   id: number;
   username: string;
@@ -6,7 +8,6 @@ export interface User {
   firstName: string;
   lastName: string;
   enabled: boolean;
-  // The API sends an array of simple strings, e.g., ["ADMIN", "MEMBER"]
   roles: string[]; 
   profilePicture?: string;
   createdAt: string;
@@ -30,11 +31,10 @@ export interface SignupRequest {
 export interface AuthResponse {
   token: string;
   type: string;
-  user: User; // Contains the full User object
+  user: User;
 }
 
 // --- PROJECT & TEAM TYPES ---
-// The `members` and `owner` properties will now use the correct User type
 
 export interface Project {
   id: number;
@@ -50,6 +50,7 @@ export interface ProjectRequest {
   description?: string;
 }
 
+// THIS IS THE MISSING PIECE
 export interface Team {
     id: number;
     name: string;
@@ -59,7 +60,14 @@ export interface Team {
     createdAt: string;
 }
 
-// --- ALL OTHER TYPES BELOW ARE UNCHANGED ---
+export interface TeamRequest {
+  name: string;
+  description?: string;
+}
+// END OF MISSING PIECE
+
+
+// --- ALL OTHER TYPES BELOW THIS LINE ARE FOR FUTURE USE ---
 
 // Chat types
 export interface ChatRoom {

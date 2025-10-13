@@ -19,7 +19,9 @@ import Profile from './pages/Profile/Profile';
 import Settings from './pages/Settings/Settings';
 import VerifyEmail from './pages/Auth/VerifyEmail';
 import ProjectsPage from './pages/Projects/ProjectsPage';
-import ProjectDetailPage from './pages/Projects/ProjectDetailPage'; // <-- 1. IMPORT THE NEW PAGE
+import ProjectDetailPage from './pages/Projects/ProjectDetailPage';
+import TeamsPage from './pages/Teams/TeamsPage';
+import TeamDetailPage from './pages/Teams/TeamDetailPage';
 
 // Components
 import ProtectedRoute from './components/Auth/ProtectedRoute';
@@ -56,14 +58,16 @@ const AppContent = () => {
                     <Route path="/register" element={<Register />} />
                     <Route path="/verify-email" element={<VerifyEmail />} />
                     
-                    {/* Protected Routes */}
                     <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                     <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                    
                     <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
-
-                    {/* --- 2. ADD THE NEW DYNAMIC ROUTE FOR PROJECT DETAILS --- */}
                     <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
+
+                    <Route path="/teams" element={<ProtectedRoute><TeamsPage /></ProtectedRoute>} />
+                    {/* --- 2. ADD THE NEW DYNAMIC ROUTE FOR TEAM DETAILS --- */}
+                    <Route path="/teams/:teamId" element={<ProtectedRoute><TeamDetailPage /></ProtectedRoute>} />
                     
                     <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} />} />
                 </Routes>

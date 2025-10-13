@@ -1,20 +1,11 @@
+// File path: frontend/src/pages/Auth/Login.tsx
 import React, { useState, useEffect } from 'react';
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import {
-    Box,
-    Card,
-    CardContent,
-    TextField,
-    Button,
-    Typography,
-    Link,
-    Alert,
-    InputAdornment,
-    IconButton,
-    Divider,
-    useTheme,
-    alpha, // <-- FIX: IMPORTED ALPHA UTILITY
+    Box, Card, CardContent, TextField, Button, Typography, Link, Alert,
+    InputAdornment, IconButton, Divider, useTheme
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import {
     Visibility as VisibilityIcon,
     VisibilityOff as VisibilityOffIcon,
@@ -26,9 +17,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useAppDispatch, useAppSelector } from '../../store/store';
 import { login, clearError, selectIsLoading, selectAuthError } from '../../store/slices/authSlice';
-import { showSuccessNotification } from '../../store/slices/uiSlice';
-import { LoginRequest } from '../../types';
-// No need to import customStyles.css here if it's already in main.tsx
+import { LoginRequest } from '../../types'; // Import the type
 
 const loginSchema = yup.object().shape({
     username: yup.string().required('Username or Email is required'),
@@ -54,10 +43,11 @@ const Login: React.FC = () => {
         dispatch(clearError());
     }, [dispatch]);
 
+    // --- THIS IS THE FIX ---
+    // Added the 'LoginRequest' type to the 'data' parameter
     const onSubmit = async (data: LoginRequest) => {
         try {
             await dispatch(login(data)).unwrap();
-            dispatch(showSuccessNotification('Welcome back!', 'You have successfully logged in.'));
             const from = (location.state as any)?.from?.pathname || '/dashboard';
             navigate(from, { replace: true });
         } catch (err: any) {
@@ -88,7 +78,6 @@ const Login: React.FC = () => {
                     backdropFilter: 'blur(20px)',
                     backgroundColor: alpha(theme.palette.background.paper, 0.9),
                 }}
-                className="animate-fade-in" // This class comes from your existing customStyles.css
             >
                 <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
                     <Box textAlign="center" mb={3}>
@@ -103,74 +92,19 @@ const Login: React.FC = () => {
                     {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
                     <Box component="form" onSubmit={handleSubmit(onSubmit)} noValidate>
-                        <Controller
-                            name="username"
-                            control={control}
-                            render={({ field }) => (
-                                <TextField
-                                    {...field}
-                                    fullWidth
-                                    label="Username or Email"
-                                    error={!!errors.username}
-                                    helperText={errors.username?.message}
-                                    sx={{ mb: 2 }}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <EmailIcon color="action" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                            )}
-                        />
-                        <Controller
-                            name="password"
-                            control={control}
-                            render={({ field }) => (
-                                <TextField
-                                    {...field}
-                                    fullWidth
-                                    label="Password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    error={!!errors.password}
-                                    helperText={errors.password?.message}
-                                    sx={{ mb: 3 }}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <PasswordIcon color="action" />
-                                            </InputAdornment>
-                                        ),
-                                        endAdornment: (
-                                            <InputAdornment position="end">
-                                                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-                                                    {showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}
-                                                </IconButton>
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                            )}
-                        />
+                        <Controller name="username" control={control} render={({ field }) => ( <TextField {...field} fullWidth label="Username or Email" error={!!errors.username} helperText={errors.username?.message} sx={{ mb: 2 }} InputProps={{ startAdornment: ( <InputAdornment position="start"><EmailIcon color="action" /></InputAdornment> ), }} /> )}/>
+                        <Controller name="password" control={control} render={({ field }) => ( <TextField {...field} fullWidth label="Password" type={showPassword ? 'text' : 'password'} error={!!errors.password} helperText={errors.password?.message} sx={{ mb: 3 }} InputProps={{ startAdornment: ( <InputAdornment position="start"><PasswordIcon color="action" /></InputAdornment> ), endAdornment: ( <InputAdornment position="end"><IconButton onClick={() => setShowPassword(!showPassword)} edge="end">{showPassword ? <VisibilityOffIcon /> : <VisibilityIcon />}</IconButton></InputAdornment> ), }} /> )}/>
 
                         <Button type="submit" fullWidth variant="contained" size="large" disabled={isLoading} sx={{ py: 1.5, mb: 2, fontWeight: 600 }}>
                             {isLoading ? 'Signing In...' : 'Sign In'}
                         </Button>
                         
                         <Divider sx={{ my: 2 }}>
-                            <Typography variant="body2" color="text.secondary">
-                                OR
-                            </Typography>
+                            <Typography variant="body2" color="text.secondary"> OR </Typography>
                         </Divider>
 
                         <Box textAlign="center">
-                            <Typography variant="body2" color="text.secondary">
-                                Don't have an account?{' '}
-                                <Link component={RouterLink} to="/register" fontWeight="medium">
-                                    Sign up
-                                </Link>
-                            </Typography>
+                            <Typography variant="body2" color="text.secondary"> Don't have an account?{' '} <Link component={RouterLink} to="/register" fontWeight="medium"> Sign up </Link> </Typography>
                         </Box>
                     </Box>
                 </CardContent>
