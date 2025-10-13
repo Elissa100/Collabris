@@ -1,8 +1,8 @@
-// File Path: backend/src/main/java/com/collabris/service/ProjectService.java
 package com.collabris.service;
 
 import com.collabris.dto.request.ProjectRequest;
 import com.collabris.dto.response.ProjectResponse;
+import com.collabris.entity.ChatRoom;
 import com.collabris.entity.Project;
 import com.collabris.entity.User;
 import com.collabris.repository.ProjectRepository;
@@ -17,7 +17,6 @@ import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @Service
-// Make the whole service transactional to keep the session open
 @Transactional(readOnly = true)
 public class ProjectService {
 
@@ -35,25 +34,32 @@ public class ProjectService {
         project.setDescription(projectRequest.getDescription());
         project.setOwner(owner);
         project.addMember(owner);
+        
+        ChatRoom projectChatRoom = new ChatRoom(
+            projectRequest.getName(), 
+            "Chat for project: " + projectRequest.getName(),
+            ChatRoom.RoomType.PROJECT,
+            project,
+            owner
+        );
+        project.setChatRoom(projectChatRoom);
+
         Project savedProject = projectRepository.save(project);
 
         long totalProjects = projectRepository.count();
         messagingTemplate.convertAndSend("/topic/dashboard/stats", Map.of("totalProjects", totalProjects));
 
-        // Convert to DTO inside the transactional method
         return new ProjectResponse(savedProject);
     }
 
     public ProjectResponse getProjectById(Long projectId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new NoSuchElementException("Project not found with ID: " + projectId));
-        // Convert to DTO inside the transactional method
         return new ProjectResponse(project);
     }
 
     public List<ProjectResponse> getProjectsByMemberId(Long userId) {
         List<Project> projects = projectRepository.findByMemberId(userId);
-        // Convert to DTO list inside the transactional method
         return projects.stream().map(ProjectResponse::new).collect(Collectors.toList());
     }
 
