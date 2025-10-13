@@ -1,83 +1,46 @@
+// File Path: backend/src/main/java/com/collabris/entity/ChatMessage.java
 package com.collabris.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "chat_messages")
 public class ChatMessage {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotBlank
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @Enumerated(EnumType.STRING)
-    private MessageType type = MessageType.CHAT;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id")
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chat_room_id")
-    private ChatRoom chatRoom;
+    @Column(nullable = false)
+    private LocalDateTime timestamp;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    public ChatMessage() {}
-
-    public ChatMessage(String content, MessageType type, User sender, ChatRoom chatRoom) {
-        this.content = content;
-        this.type = type;
-        this.sender = sender;
-        this.chatRoom = chatRoom;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
+    // --- THIS IS THE NEW FIELD ---
+    @Column(name = "project_id", nullable = false)
+    private Long projectId;
+    // --- END OF NEW FIELD ---
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        this.timestamp = LocalDateTime.now();
     }
 
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }
-
-    public MessageType getType() { return type; }
-    public void setType(MessageType type) { this.type = type; }
-
     public User getSender() { return sender; }
     public void setSender(User sender) { this.sender = sender; }
-
-    public ChatRoom getChatRoom() { return chatRoom; }
-    public void setChatRoom(ChatRoom chatRoom) { this.chatRoom = chatRoom; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    public enum MessageType {
-        CHAT, JOIN, LEAVE, SYSTEM
-    }
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+    public Long getProjectId() { return projectId; }
+    public void setProjectId(Long projectId) { this.projectId = projectId; }
 }
