@@ -59,8 +59,9 @@ public class ProjectService {
     }
 
     public List<ProjectResponse> getProjectsByMemberId(Long userId) {
-        List<Project> projects = projectRepository.findByMemberId(userId);
-        return projects.stream().map(ProjectResponse::new).collect(Collectors.toList());
+        return projectRepository.findByMemberId(userId).stream()
+                .map(ProjectResponse::new)
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -87,8 +88,7 @@ public class ProjectService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         project.addMember(user);
-        Project savedProject = projectRepository.save(project);
-        return new ProjectResponse(savedProject);
+        return new ProjectResponse(projectRepository.save(project));
     }
 
     @Transactional
@@ -98,7 +98,6 @@ public class ProjectService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         project.removeMember(user);
-        Project savedProject = projectRepository.save(project);
-        return new ProjectResponse(savedProject);
+        return new ProjectResponse(projectRepository.save(project));
     }
 }
