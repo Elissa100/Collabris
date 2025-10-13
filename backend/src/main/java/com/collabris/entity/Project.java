@@ -1,4 +1,3 @@
-// File path: backend/src/main/java/com/collabris/entity/Project.java
 package com.collabris.entity;
 
 import jakarta.persistence.*;
@@ -34,11 +33,9 @@ public class Project {
     @JoinColumn(name = "team_id")
     private Team team;
     
-    // --- NEW RELATIONSHIP ---
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_room_id", referencedColumnName = "id")
     private ChatRoom chatRoom;
-    // --- END NEW RELATIONSHIP ---
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -47,22 +44,12 @@ public class Project {
     private LocalDateTime updatedAt;
 
     @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-    }
-
+    protected void onCreate() { this.createdAt = LocalDateTime.now(); }
     @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    protected void onUpdate() { this.updatedAt = LocalDateTime.now(); }
     
-    public void addMember(User user) {
-        this.members.add(user);
-    }
-    
-    public void removeMember(User user) {
-        this.members.remove(user);
-    }
+    public void addMember(User user) { this.members.add(user); }
+    public void removeMember(User user) { this.members.remove(user); }
     
     // Getters and Setters
     public Long getId() { return id; }
