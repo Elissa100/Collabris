@@ -1,18 +1,17 @@
-// File path: frontend/src/pages/Projects/ProjectDetailPage.jsx
+// File Path: frontend/src/pages/Projects/ProjectDetailPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import {
     Box, Typography, CircularProgress, Alert, Paper, Grid,
-    Avatar, List, ListItem, ListItemAvatar, ListItemText, Divider
+    Avatar, List, ListItem, ListItemAvatar, ListItemText, Divider, Chip
 } from '@mui/material';
-import { Folder as FolderIcon, Person as PersonIcon } from '@mui/icons-material';
+import { Person as PersonIcon } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 
 import Layout from '../../components/Layout/Layout';
 import { getProjectById } from '../../services/projectService';
 
 const ProjectDetailPage = () => {
-    // useParams hook reads the 'projectId' from the URL (e.g., /projects/1)
     const { projectId } = useParams();
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -21,9 +20,9 @@ const ProjectDetailPage = () => {
     useEffect(() => {
         const fetchProject = async () => {
             if (!projectId) return;
-
             try {
                 setLoading(true);
+                setError(null);
                 const projectData = await getProjectById(projectId);
                 setProject(projectData);
             } catch (err) {
@@ -38,6 +37,9 @@ const ProjectDetailPage = () => {
         fetchProject();
     }, [projectId]);
 
+    // --- THIS IS THE FINAL FIX ---
+    // If we are loading OR if there is an error, we show those states first.
+    // This prevents the component from trying to render "project.name" when project is null.
     if (loading) {
         return (
             <Layout>
@@ -53,20 +55,19 @@ const ProjectDetailPage = () => {
         return <Layout><Alert severity="error" sx={{ m: 2 }}>{error}</Alert></Layout>;
     }
 
+    // Only try to render the main content if the project object actually exists.
     if (!project) {
         return <Layout><Alert severity="warning" sx={{ m: 2 }}>Project not found.</Alert></Layout>;
     }
 
     return (
         <Layout>
-            {/* Header */}
             <Box mb={4}>
                 <Typography variant="h4" fontWeight="bold">{project.name}</Typography>
                 <Typography color="text.secondary">{project.description}</Typography>
             </Box>
 
             <Grid container spacing={3}>
-                {/* Main Content Area (Tasks, Chat will go here later) */}
                 <Grid item xs={12} md={8}>
                     <Paper sx={{ p: 2, minHeight: 400 }}>
                         <Typography variant="h6">Project Workspace</Typography>
@@ -74,25 +75,24 @@ const ProjectDetailPage = () => {
                     </Paper>
                 </Grid>
 
-                {/* Right Sidebar with Members List */}
                 <Grid item xs={12} md={4}>
                     <Paper sx={{ p: 2 }}>
-                        <Typography variant="h6" gutterBottom>Members</Typography>
+                        <Typography variant="h6" gutterBottom>Members ({project.members?.length || 0})</Typography>
                         <Divider />
                         <List>
+                            {/* Safety check for members array */}
                             {project.members && project.members.map(member => (
                                 <ListItem key={member.id}>
                                     <ListItemAvatar>
-                                        <Avatar>
-                                            <PersonIcon />
+                                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                                            {member.firstName?.charAt(0)}
                                         </Avatar>
                                     </ListItemAvatar>
                                     <ListItemText
                                         primary={`${member.firstName} ${member.lastName}`}
                                         secondary={`@${member.username}`}
                                     />
-                                    {/* Show a chip for the project owner */}
-                                    {member.id === project.owner?.id && <Chip label="Owner" size="small" />}
+                                    {member.id === project.owner?.id && <Chip label="Owner" size="small" variant="outlined" />}
                                 </ListItem>
                             ))}
                         </List>
