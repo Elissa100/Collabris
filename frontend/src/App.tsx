@@ -1,4 +1,3 @@
-// File path: frontend/src/App.tsx
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
@@ -40,13 +39,19 @@ const AppContent = () => {
     const [theme] = useTheme();
 
     useEffect(() => {
-        dispatch(getCurrentUser());
+        // Run this check only once when the app boots up
+        if (store.getState().auth.initialLoad === 'idle') {
+            dispatch(getCurrentUser());
+        }
     }, [dispatch]);
     
+    // --- THIS IS THE CRITICAL LOGIC ---
+    // Show the loading screen ONLY if the initial check has not completed yet.
     if (initialLoad === 'idle' || initialLoad === 'loading') {
         return <InitialLoadingScreen />;
     }
-
+    
+    // If the check is 'succeeded' or 'failed', we know the user's auth status and can render.
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
@@ -66,7 +71,6 @@ const AppContent = () => {
                     <Route path="/projects/:projectId" element={<ProtectedRoute><ProjectDetailPage /></ProtectedRoute>} />
 
                     <Route path="/teams" element={<ProtectedRoute><TeamsPage /></ProtectedRoute>} />
-                    {/* --- 2. ADD THE NEW DYNAMIC ROUTE FOR TEAM DETAILS --- */}
                     <Route path="/teams/:teamId" element={<ProtectedRoute><TeamDetailPage /></ProtectedRoute>} />
                     
                     <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} />} />
