@@ -1,26 +1,18 @@
-// File path: frontend/src/types/index.ts
 
-// User types
 export interface User {
   id: number;
+  username: string;
   email: string;
   firstName: string;
   lastName: string;
-  username?: string;
-  avatar?: string;
-  // This is the critical fix. The API sends role names as an array of strings.
-  roles: string[];
-  createdAt?: string;
-  updatedAt?: string;
   enabled: boolean;
+  // The API sends an array of simple strings, e.g., ["ADMIN", "MEMBER"]
+  roles: string[]; 
+  profilePicture?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
-export interface Role {
-  id: number;
-  name: 'ADMIN' | 'MANAGER' | 'MEMBER';
-}
-
-// Auth types
 export interface LoginRequest {
   username: string;
   password: string;
@@ -38,56 +30,36 @@ export interface SignupRequest {
 export interface AuthResponse {
   token: string;
   type: string;
-  user: User; // The full User object is nested in the login response
+  user: User; // Contains the full User object
 }
 
-// Team types
-export interface Team {
-  id: number;
-  name: string;
-  description?: string;
-  createdAt: string;
-  updatedAt: string;
-  leader?: User;
-  members: User[];
-  projects?: Project[];
-}
+// --- PROJECT & TEAM TYPES ---
+// The `members` and `owner` properties will now use the correct User type
 
-export interface TeamRequest {
-  name: string;
-  description?: string;
-  leaderId?: number;
-}
-
-// Project types
 export interface Project {
   id: number;
   name: string;
-  description?: string;
-  status: 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-  startDate?: string;
-  endDate?: string;
-  deadline?: string;
-  progress: number;
-  createdAt: string;
-  updatedAt: string;
-  owner?: User;
-  team?: Team;
+  description: string;
+  owner: User;
   members: User[];
+  createdAt: string;
 }
 
 export interface ProjectRequest {
   name: string;
   description?: string;
-  status?: Project['status'];
-  priority?: Project['priority'];
-  startDate?: string;
-  endDate?: string;
-  deadline?: string;
-  teamId?: number;
-  ownerId?: number;
 }
+
+export interface Team {
+    id: number;
+    name: string;
+    description: string;
+    owner: User;
+    members: User[];
+    createdAt: string;
+}
+
+// --- ALL OTHER TYPES BELOW ARE UNCHANGED ---
 
 // Chat types
 export interface ChatRoom {
