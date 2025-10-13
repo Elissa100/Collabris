@@ -1,4 +1,4 @@
-// File Path: backend/src/main/java/com/collabris/entity/Project.java
+// File path: backend/src/main/java/com/collabris/entity/Project.java
 package com.collabris.entity;
 
 import jakarta.persistence.*;
@@ -33,6 +33,12 @@ public class Project {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id")
     private Team team;
+    
+    // --- NEW RELATIONSHIP ---
+    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_room_id", referencedColumnName = "id")
+    private ChatRoom chatRoom;
+    // --- END NEW RELATIONSHIP ---
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -50,7 +56,6 @@ public class Project {
         this.updatedAt = LocalDateTime.now();
     }
     
-    // --- THIS IS THE FIX ---
     public void addMember(User user) {
         this.members.add(user);
     }
@@ -58,8 +63,7 @@ public class Project {
     public void removeMember(User user) {
         this.members.remove(user);
     }
-    // --- END OF FIX ---
-
+    
     // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -73,6 +77,8 @@ public class Project {
     public void setMembers(Set<User> members) { this.members = members; }
     public Team getTeam() { return team; }
     public void setTeam(Team team) { this.team = team; }
+    public ChatRoom getChatRoom() { return chatRoom; }
+    public void setChatRoom(ChatRoom chatRoom) { this.chatRoom = chatRoom; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
