@@ -1,4 +1,4 @@
-// File Path: backend/src/main/java/com/collabris/entity/ChatMessage.java
+// File path: backend/src/main/java/com/collabris/entity/ChatMessage.java
 package com.collabris.entity;
 
 import jakarta.persistence.*;
@@ -15,17 +15,18 @@ public class ChatMessage {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.EAGER) // Eager fetch the sender to display their name
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
+    // --- THIS IS THE CRITICAL FIX ---
+    // This creates the "chatRoom" field that the ChatRoom entity is looking for.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_room_id", nullable = false)
+    private ChatRoom chatRoom;
+
     @Column(nullable = false)
     private LocalDateTime timestamp;
-
-    // --- THIS IS THE NEW FIELD ---
-    @Column(name = "project_id", nullable = false)
-    private Long projectId;
-    // --- END OF NEW FIELD ---
 
     @PrePersist
     protected void onCreate() {
@@ -39,8 +40,8 @@ public class ChatMessage {
     public void setContent(String content) { this.content = content; }
     public User getSender() { return sender; }
     public void setSender(User sender) { this.sender = sender; }
+    public ChatRoom getChatRoom() { return chatRoom; }
+    public void setChatRoom(ChatRoom chatRoom) { this.chatRoom = chatRoom; }
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
-    public Long getProjectId() { return projectId; }
-    public void setProjectId(Long projectId) { this.projectId = projectId; }
 }
