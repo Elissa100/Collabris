@@ -1,4 +1,3 @@
-// File path: backend/src/main/java/com/collabris/entity/ChatMessage.java
 package com.collabris.entity;
 
 import jakarta.persistence.*;
@@ -15,12 +14,10 @@ public class ChatMessage {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
-    @ManyToOne(fetch = FetchType.EAGER) // Eager fetch the sender to display their name
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "sender_id", nullable = false)
     private User sender;
 
-    // --- THIS IS THE CRITICAL FIX ---
-    // This creates the "chatRoom" field that the ChatRoom entity is looking for.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_room_id", nullable = false)
     private ChatRoom chatRoom;
