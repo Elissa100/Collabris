@@ -1,25 +1,49 @@
-package com.collabris.repository;
+// File Path: backend/src/main/java/com/collabris/entity/ChatMessage.java
+package com.collabris.entity;
 
-import com.collabris.entity.ChatMessage;
-import com.collabris.entity.ChatRoom;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import java.util.List;
 
-@Repository
-public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
-    Page<ChatMessage> findByChatRoomOrderByCreatedAtDesc(ChatRoom chatRoom, Pageable pageable);
+@Entity
+@Table(name = "chat_messages")
+public class ChatMessage {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String content;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "sender_id", nullable = false)
+    private User sender;
+
+    // --- THIS IS THE FIX ---
+    // This creates the "chatRoom" field that the ChatRoom entity is looking for.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_room_id", nullable = false)
+    private ChatRoom chatRoom;
+
+    @Column(nullable = false)
+    private LocalDateTime timestamp;
+
+    @PrePersist
+    protected void onCreate() {
+        this.timestamp = LocalDateTime.now();
+    }
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
+    public User getSender() { return sender; }
+    public void setSender(User sender) { this.sender = sender; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
     
-    List<ChatMessage> findByChatRoomIdOrderByCreatedAtAsc(Long chatRoomId);
-    
-    @Query("SELECT m FROM ChatMessage m WHERE m.chatRoom.id = :chatRoomId AND m.createdAt >= :since ORDER BY m.createdAt ASC")
-    List<ChatMessage> findRecentMessages(@Param("chatRoomId") Long chatRoomId, @Param("since") LocalDateTime since);
-    
-    Long countByChatRoomId(Long chatRoomId);
+    // Getter and setter for the new relationship
+    public ChatRoom getChatRoom() { return chatRoom; }
+    public void setChatRoom(ChatRoom chatRoom) { this.chatRoom = chatRoom; }
 }
