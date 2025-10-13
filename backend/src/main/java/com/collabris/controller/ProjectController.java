@@ -1,4 +1,3 @@
-// File Path: backend/src/main/java/com/collabris/controller/ProjectController.java
 package com.collabris.controller;
 
 import com.collabris.dto.request.ProjectRequest;
@@ -31,28 +30,26 @@ public class ProjectController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProjectResponse> createProject(@RequestBody ProjectRequest request, @AuthenticationPrincipal UserDetails userDetails) {
-        // FIX: Service now returns the correct DTO
+        // FIX: Service now returns the correct DTO directly
         return ResponseEntity.ok(projectService.createProject(request, getCurrentUser(userDetails)));
     }
 
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ProjectResponse>> getAllForCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        // FIX: Service now returns the correct DTO
         return ResponseEntity.ok(projectService.getProjectsByMemberId(getCurrentUser(userDetails).getId()));
     }
 
     @GetMapping("/{projectId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId) {
-        // FIX: Service now returns the correct DTO
         return ResponseEntity.ok(projectService.getProjectById(projectId));
     }
 
     @PutMapping("/{projectId}")
     @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
     public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long projectId, @RequestBody ProjectRequest request) {
-        // FIX: Service now returns the correct DTO
+        // FIX: Service now returns the correct DTO directly
         return ResponseEntity.ok(projectService.updateProject(projectId, request));
     }
 
@@ -66,14 +63,12 @@ public class ProjectController {
     @PostMapping("/{projectId}/members/{userId}")
     @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
     public ResponseEntity<ProjectResponse> addMemberToProject(@PathVariable Long projectId, @PathVariable Long userId) {
-        // FIX: Service now returns the correct DTO
         return ResponseEntity.ok(projectService.addMemberToProject(projectId, userId));
     }
 
     @DeleteMapping("/{projectId}/members/{userId}")
     @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
     public ResponseEntity<ProjectResponse> removeMemberFromProject(@PathVariable Long projectId, @PathVariable Long userId) {
-        // FIX: Service now returns the correct DTO
         return ResponseEntity.ok(projectService.removeMemberFromProject(projectId, userId));
     }
 }
