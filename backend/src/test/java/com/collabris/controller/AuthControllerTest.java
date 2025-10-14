@@ -1,4 +1,3 @@
-// File Path: backend/src/test/java/com/collabris/controller/AuthControllerTest.java
 package com.collabris.controller;
 
 import com.collabris.dto.request.LoginRequest;
@@ -16,6 +15,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles; // 1. IMPORT THIS
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestPropertySource(locations = "classpath:application-test.properties")
 @Transactional
+@ActiveProfiles("test") // 2. ADD THIS ANNOTATION
 public class AuthControllerTest {
 
     @Autowired
@@ -43,16 +44,16 @@ public class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll();
-        roleRepository.deleteAll();
-        
-        // FIX: Use the clean enum names as defined in Role.java
+        // Since DataInitializer is disabled, we are starting with a 100% empty DB.
+        // We must create all roles needed for the tests.
         roleRepository.save(new Role(Role.ERole.MEMBER));
+        roleRepository.save(new Role(Role.ERole.MANAGER)); // Add if other tests need it
         roleRepository.save(new Role(Role.ERole.ADMIN));
     }
 
     @AfterEach
     void tearDown() {
+        // Cleaning up is still good practice
         userRepository.deleteAll();
         roleRepository.deleteAll();
     }
@@ -83,7 +84,6 @@ public class AuthControllerTest {
         user.setLastName("User");
         user.setEnabled(true);
 
-        // FIX: Use the clean enum name to find the role for the test user
         Role memberRole = roleRepository.findByName(Role.ERole.MEMBER)
                 .orElseThrow(() -> new RuntimeException("MEMBER Role not found"));
         user.setRoles(Set.of(memberRole));

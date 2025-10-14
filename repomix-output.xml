@@ -150,6 +150,7 @@ frontend/src/services/projectService.ts
 frontend/src/services/teamService.ts
 frontend/src/services/userService.ts
 frontend/src/store/slices/authSlice.ts
+frontend/src/store/slices/chatSlice.ts
 frontend/src/store/slices/dashboardSlice.ts
 frontend/src/store/slices/themeSlice.ts
 frontend/src/store/slices/uiSlice.ts
@@ -3918,6 +3919,54 @@ const Dashboard: React.FC = () => {
 export default Dashboard;
 </file>
 
+<file path="frontend/src/pages/Dashboard/Dashboard.jsx">
+// File Path: frontend/src/pages/Dashboard/Dashboard.jsx
+import React from 'react';
+import { useSelector } from 'react-redux';
+import { selectUser } from '../../store/slices/authSlice';
+
+import AdminDashboard from './AdminDashboard';
+import ManagerDashboard from './ManagerDashboard';
+import MemberDashboard from './MemberDashboard';
+import LoadingSpinner from '../../components/Common/LoadingSpinner';
+
+const Dashboard = () => {
+    const user = useSelector(selectUser);
+
+    if (!user || !user.roles) {
+        return <LoadingSpinner message="Loading user data..." />;
+    }
+
+    // --- THIS IS THE FIX ---
+    // The backend sends `user.roles` as an array of strings (e.g., ['ADMIN']).
+    // We can use this array directly. No .map() is needed.
+    const roles = user.roles;
+
+    // This check will now work correctly.
+    if (roles.includes('ADMIN')) {
+        return <AdminDashboard />;
+    }
+    
+    if (roles.includes('MANAGER')) {
+        return <ManagerDashboard />;
+    }
+    
+    if (roles.includes('MEMBER')) {
+        return <MemberDashboard />;
+    }
+    
+    // Fallback message for a user with no valid roles.
+    return (
+        <div>
+            <h1>Welcome</h1>
+            <p>You do not have a role assigned. Please contact an administrator.</p>
+        </div>
+    );
+};
+
+export default Dashboard;
+</file>
+
 <file path="frontend/src/pages/Profile/Profile.jsx">
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
@@ -4769,38 +4818,6 @@ export const selectUserLoading = (state: RootState) => state.user.isLoading;
 export const selectUserError = (state: RootState) => state.user.error;
 
 export default userSlice.reducer;
-</file>
-
-<file path="frontend/src/store/store.ts">
-import { configureStore } from '@reduxjs/toolkit';
-import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
-import authReducer from './slices/authSlice';
-import themeReducer from './slices/themeSlice';
-import uiReducer from './slices/uiSlice';
-import userReducer from './slices/userSlice'; // Import the new reducer
-
-export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    theme: themeReducer,
-    ui: uiReducer,
-    user: userReducer, // Add the user reducer to the store
-  },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: false,
-    }),
-  devTools: process.env.NODE_ENV !== 'production',
-});
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-
-// Use throughout your app instead of plain `useDispatch` and `useSelector`
-export const useAppDispatch = () => useDispatch<AppDispatch>();
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
-
-export default store;
 </file>
 
 <file path="frontend/src/theme/customStyles.css">
@@ -5927,6 +5944,81 @@ public class ChatController {
 }
 </file>
 
+<file path="backend/src/main/java/com/collabris/controller/TeamController.java">
+package com.collabris.controller;
+
+import com.collabris.dto.request.TeamRequest;
+import com.collabris.dto.response.TeamResponse;
+import com.collabris.entity.User;
+import com.collabris.service.TeamService;
+import com.collabris.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/teams")
+public class TeamController {
+
+    @Autowired
+    private TeamService teamService;
+    @Autowired
+    private UserService userService;
+    
+    private User getCurrentUser(UserDetails userDetails) {
+        return userService.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Error: Authenticated user not found in database."));
+    }
+
+    @PostMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TeamResponse> createTeam(@RequestBody TeamRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(teamService.createTeam(request, getCurrentUser(userDetails)));
+    }
+
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TeamResponse>> getAllTeams(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(teamService.getTeamsForUser(getCurrentUser(userDetails)));
+    }
+
+    @GetMapping("/{teamId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<TeamResponse> getTeamById(@PathVariable Long teamId) {
+        return ResponseEntity.ok(teamService.getTeamById(teamId));
+    }
+
+    @PutMapping("/{teamId}")
+    @PreAuthorize("hasRole('ADMIN') or @teamRepository.findById(#teamId).get().getOwner().getUsername() == authentication.name")
+    public ResponseEntity<TeamResponse> updateTeam(@PathVariable Long teamId, @RequestBody TeamRequest request) {
+        return ResponseEntity.ok(teamService.updateTeam(teamId, request));
+    }
+
+    @DeleteMapping("/{teamId}")
+    @PreAuthorize("hasRole('ADMIN') or @teamRepository.findById(#teamId).get().getOwner().getUsername() == authentication.name")
+    public ResponseEntity<Void> deleteTeam(@PathVariable Long teamId) {
+        teamService.deleteTeam(teamId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{teamId}/members/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or @teamRepository.findById(#teamId).get().getOwner().getUsername() == authentication.name")
+    public ResponseEntity<TeamResponse> addMemberToTeam(@PathVariable Long teamId, @PathVariable Long userId) {
+        return ResponseEntity.ok(teamService.addMemberToTeam(teamId, userId));
+    }
+
+    @DeleteMapping("/{teamId}/members/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or @teamRepository.findById(#teamId).get().getOwner().getUsername() == authentication.name")
+    public ResponseEntity<TeamResponse> removeMemberFromTeam(@PathVariable Long teamId, @PathVariable Long userId) {
+        return ResponseEntity.ok(teamService.removeMemberFromTeam(teamId, userId));
+    }
+}
+</file>
+
 <file path="backend/src/main/java/com/collabris/controller/UserController.java">
 // File Path: backend/src/main/java/com/collabris/controller/UserController.java
 package com.collabris.controller;
@@ -6391,63 +6483,6 @@ public class TeamService {
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-</file>
-
-<file path="frontend/package.json">
-{
-  "name": "collabris-frontend",
-  "private": true,
-  "version": "1.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@emotion/react": "^11.11.1",
-    "@emotion/styled": "^11.11.0",
-    "@hookform/resolvers": "^3.3.2",
-    "@mui/icons-material": "^5.15.1",
-    "@mui/material": "^5.15.1",
-    "@mui/x-charts": "^6.18.1",
-    "@mui/x-data-grid": "^6.18.1",
-    "@reduxjs/toolkit": "^2.0.1",
-    "@stomp/stompjs": "^7.2.1",
-    "axios": "^1.6.2",
-    "framer-motion": "^10.16.16",
-    "lucide-react": "^0.344.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-hook-form": "^7.48.2",
-    "react-hot-toast": "^2.4.1",
-    "react-icons": "^5.5.0",
-    "react-redux": "^9.0.4",
-    "react-router-dom": "^6.20.1",
-    "recharts": "^2.8.0",
-    "sockjs-client": "^1.6.1",
-    "stompjs": "^2.3.3",
-    "yup": "^1.4.0"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.9.1",
-    "@types/react": "^18.3.5",
-    "@types/react-dom": "^18.3.0",
-    "@types/sockjs-client": "^1.5.4",
-    "@vitejs/plugin-react": "^4.7.0",
-    "autoprefixer": "^10.4.21",
-    "eslint": "^9.9.1",
-    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
-    "eslint-plugin-react-refresh": "^0.4.11",
-    "globals": "^15.9.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.5.3",
-    "typescript-eslint": "^8.3.0",
-    "vite": "^5.4.20"
-  }
-}
 </file>
 
 <file path="frontend/src/components/Admin/UserTable.jsx">
@@ -6940,54 +6975,6 @@ const Register: React.FC = () => {
 };
 
 export default Register;
-</file>
-
-<file path="frontend/src/pages/Dashboard/Dashboard.jsx">
-// File Path: frontend/src/pages/Dashboard/Dashboard.jsx
-import React from 'react';
-import { useSelector } from 'react-redux';
-import { selectUser } from '../../store/slices/authSlice';
-
-import AdminDashboard from './AdminDashboard';
-import ManagerDashboard from './ManagerDashboard';
-import MemberDashboard from './MemberDashboard';
-import LoadingSpinner from '../../components/Common/LoadingSpinner';
-
-const Dashboard = () => {
-    const user = useSelector(selectUser);
-
-    if (!user || !user.roles) {
-        return <LoadingSpinner message="Loading user data..." />;
-    }
-
-    // --- THIS IS THE FIX ---
-    // The backend sends `user.roles` as an array of strings (e.g., ['ADMIN']).
-    // We can use this array directly. No .map() is needed.
-    const roles = user.roles;
-
-    // This check will now work correctly.
-    if (roles.includes('ADMIN')) {
-        return <AdminDashboard />;
-    }
-    
-    if (roles.includes('MANAGER')) {
-        return <ManagerDashboard />;
-    }
-    
-    if (roles.includes('MEMBER')) {
-        return <MemberDashboard />;
-    }
-    
-    // Fallback message for a user with no valid roles.
-    return (
-        <div>
-            <h1>Welcome</h1>
-            <p>You do not have a role assigned. Please contact an administrator.</p>
-        </div>
-    );
-};
-
-export default Dashboard;
 </file>
 
 <file path="frontend/src/pages/Landing/Landing.tsx">
@@ -7496,35 +7483,6 @@ const TeamsPage = () => {
 export default TeamsPage;
 </file>
 
-<file path="frontend/src/services/chatService.ts">
-// File path: frontend/src/services/chatService.ts
-import apiClient from './apiClient';
-import { ChatMessage } from '../types';
-
-export interface ChatMessageRequest {
-    content: string;
-}
-
-// --- THIS IS THE MISSING FUNCTION, NOW CORRECTLY ADDED BACK ---
-export const getProjectMessages = async (projectId: number): Promise<ChatMessage[]> => {
-    // This correctly calls the endpoint for fetching a project's message history.
-    const response = await apiClient.get(`/api/chat/projects/${projectId}/messages`);
-    return response;
-};
-
-// This function can be used for fetching messages from non-project chat rooms later.
-export const getMessages = async (roomId: number): Promise<ChatMessage[]> => {
-  const response = await apiClient.get(`/api/chat/rooms/${roomId}/messages`);
-  return response;
-};
-
-// This function can be used for sending messages to non-project chat rooms later.
-export const sendMessage = async (messageData: { chatRoomId: number; content: string }): Promise<ChatMessage> => {
-  const response = await apiClient.post('/api/chat/messages', messageData);
-  return response;
-};
-</file>
-
 <file path="frontend/src/services/projectService.ts">
 // File path: frontend/src/services/projectService.ts
 import apiClient from './apiClient';
@@ -7601,6 +7559,7 @@ export const deleteTeam = async (teamId: number): Promise<void> => {
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User, LoginRequest, SignupRequest, AuthResponse } from '../../types';
 import * as authService from '../../services/authService';
+import { RootState } from '../store'; // Import RootState for the selector type
 
 interface AuthState {
   user: User | null;
@@ -7694,7 +7653,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.token = action.payload.token;
-        state.user = action.payload.user; 
+        state.user = action.payload.user;
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
@@ -7722,18 +7681,99 @@ const authSlice = createSlice({
 
 export const { logout, clearError, setUser } = authSlice.actions;
 
-export const selectUser = (state: { auth: AuthState }) => state.auth.user;
-export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
-export const selectIsLoading = (state: { auth: AuthState }) => state.auth.isLoading;
-export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
-export const selectInitialLoad = (state: { auth: AuthState }) => state.auth.initialLoad;
+// --- SELECTORS ---
+export const selectUser = (state: RootState) => state.auth.user;
+export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
+export const selectIsLoading = (state: RootState) => state.auth.isLoading;
+export const selectAuthError = (state: RootState) => state.auth.error;
+export const selectInitialLoad = (state: RootState) => state.auth.initialLoad;
+export const selectIsAdmin = (state: RootState) => state.auth.user?.roles.some(role => role === 'ADMIN') || false;
 
 // --- THIS IS THE FIX ---
-// The `roles` array now contains strings, so we check the string directly.
-export const selectIsAdmin = (state: { auth: AuthState }) =>
-  state.auth.user?.roles.some(role => role === 'ADMIN') || false;
+// Add the missing selector for the authentication token.
+export const selectToken = (state: RootState) => state.auth.token;
 
 export default authSlice.reducer;
+</file>
+
+<file path="frontend/src/store/slices/chatSlice.ts">
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { ChatMessage } from '../../types';
+import { getProjectMessages } from '../../services/chatService';
+import { RootState } from '../store';
+
+interface ChatState {
+  messagesByProjectId: Record<string, ChatMessage[]>; // e.g., { "1": [msg1, msg2], "2": [msg3] }
+  loadingStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
+  error: string | null;
+}
+
+const initialState: ChatState = {
+  messagesByProjectId: {},
+  loadingStatus: 'idle',
+  error: null,
+};
+
+// Async thunk to fetch messages for a project
+export const fetchMessagesForProject = createAsyncThunk(
+  'chat/fetchMessagesForProject',
+  async (projectId: string, { getState, rejectWithValue }) => {
+    // Optimization: Don't re-fetch if messages for this project are already loaded
+    const state = getState() as RootState;
+    if (state.chat.messagesByProjectId[projectId]) {
+      return { projectId, messages: state.chat.messagesByProjectId[projectId] };
+    }
+
+    try {
+      const messages = await getProjectMessages(projectId);
+      return { projectId, messages };
+    } catch (error: any) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
+const chatSlice = createSlice({
+  name: 'chat',
+  initialState,
+  reducers: {
+    // Reducer to add a new message (from WebSocket or optimistic update)
+    addMessage: (state, action: PayloadAction<{ projectId: string; message: ChatMessage }>) => {
+      const { projectId, message } = action.payload;
+      const projectMessages = state.messagesByProjectId[projectId] || [];
+      
+      // Avoid adding duplicate messages
+      if (!projectMessages.some(m => m.id === message.id)) {
+        projectMessages.push(message);
+        state.messagesByProjectId[projectId] = projectMessages;
+      }
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchMessagesForProject.pending, (state) => {
+        state.loadingStatus = 'loading';
+      })
+      .addCase(fetchMessagesForProject.fulfilled, (state, action) => {
+        state.loadingStatus = 'succeeded';
+        state.messagesByProjectId[action.payload.projectId] = action.payload.messages;
+      })
+      .addCase(fetchMessagesForProject.rejected, (state, action) => {
+        state.loadingStatus = 'failed';
+        state.error = action.payload as string;
+      });
+  },
+});
+
+export const { addMessage } = chatSlice.actions;
+
+// Selector to get messages for a specific project
+export const selectMessagesForProject = (projectId: string) => (state: RootState) => 
+  state.chat.messagesByProjectId[projectId] || [];
+
+export const selectChatLoadingStatus = (state: RootState) => state.chat.loadingStatus;
+
+export default chatSlice.reducer;
 </file>
 
 <file path="frontend/src/store/slices/dashboardSlice.ts">
@@ -7811,6 +7851,40 @@ export const selectAdminStats = (state: { dashboard: DashboardState }) => state.
 export const selectDashboardLoading = (state: { dashboard: DashboardState }) => state.dashboard.loading;
 
 export default dashboardSlice.reducer;
+</file>
+
+<file path="frontend/src/store/store.ts">
+import { configureStore } from '@reduxjs/toolkit';
+import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
+import authReducer from './slices/authSlice';
+import themeReducer from './slices/themeSlice';
+import uiReducer from './slices/uiSlice';
+import userReducer from './slices/userSlice';
+import chatReducer from './slices/chatSlice'; // 1. Import the new reducer
+
+export const store = configureStore({
+  reducer: {
+    auth: authReducer,
+    theme: themeReducer,
+    ui: uiReducer,
+    user: userReducer,
+    chat: chatReducer, // 2. Add the chat reducer to the store
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false,
+    }),
+  devTools: process.env.NODE_ENV !== 'production',
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
+// Use throughout your app instead of plain `useDispatch` and `useSelector`
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
+
+export default store;
 </file>
 
 <file path="multi-commit.ps1">
@@ -7979,288 +8053,61 @@ public class DashboardController {
 }
 </file>
 
-<file path="backend/src/main/java/com/collabris/controller/TeamController.java">
-package com.collabris.controller;
-
-import com.collabris.dto.request.TeamRequest;
-import com.collabris.dto.response.TeamResponse;
-import com.collabris.entity.User;
-import com.collabris.service.TeamService;
-import com.collabris.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
-
-@RestController
-@RequestMapping("/api/teams")
-public class TeamController {
-
-    @Autowired
-    private TeamService teamService;
-    @Autowired
-    private UserService userService;
-    
-    private User getCurrentUser(UserDetails userDetails) {
-        return userService.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Error: Authenticated user not found in database."));
-    }
-
-    @PostMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<TeamResponse> createTeam(@RequestBody TeamRequest request, @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(teamService.createTeam(request, getCurrentUser(userDetails)));
-    }
-
-    @GetMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<TeamResponse>> getAllTeams(@AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(teamService.getTeamsForUser(getCurrentUser(userDetails)));
-    }
-
-    @GetMapping("/{teamId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<TeamResponse> getTeamById(@PathVariable Long teamId) {
-        return ResponseEntity.ok(teamService.getTeamById(teamId));
-    }
-
-    @PutMapping("/{teamId}")
-    @PreAuthorize("hasRole('ADMIN') or @teamRepository.findById(#teamId).get().getOwner().getUsername() == authentication.name")
-    public ResponseEntity<TeamResponse> updateTeam(@PathVariable Long teamId, @RequestBody TeamRequest request) {
-        return ResponseEntity.ok(teamService.updateTeam(teamId, request));
-    }
-
-    @DeleteMapping("/{teamId}")
-    @PreAuthorize("hasRole('ADMIN') or @teamRepository.findById(#teamId).get().getOwner().getUsername() == authentication.name")
-    public ResponseEntity<Void> deleteTeam(@PathVariable Long teamId) {
-        teamService.deleteTeam(teamId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{teamId}/members/{userId}")
-    @PreAuthorize("hasRole('ADMIN') or @teamRepository.findById(#teamId).get().getOwner().getUsername() == authentication.name")
-    public ResponseEntity<TeamResponse> addMemberToTeam(@PathVariable Long teamId, @PathVariable Long userId) {
-        return ResponseEntity.ok(teamService.addMemberToTeam(teamId, userId));
-    }
-
-    @DeleteMapping("/{teamId}/members/{userId}")
-    @PreAuthorize("hasRole('ADMIN') or @teamRepository.findById(#teamId).get().getOwner().getUsername() == authentication.name")
-    public ResponseEntity<TeamResponse> removeMemberFromTeam(@PathVariable Long teamId, @PathVariable Long userId) {
-        return ResponseEntity.ok(teamService.removeMemberFromTeam(teamId, userId));
-    }
+<file path="frontend/package.json">
+{
+  "name": "collabris-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.11.1",
+    "@emotion/styled": "^11.11.0",
+    "@hookform/resolvers": "^3.3.2",
+    "@mui/icons-material": "^5.15.1",
+    "@mui/material": "^5.15.1",
+    "@mui/x-charts": "^6.18.1",
+    "@mui/x-data-grid": "^6.18.1",
+    "@reduxjs/toolkit": "^2.0.1",
+    "@stomp/stompjs": "^7.2.1",
+    "axios": "^1.6.2",
+    "framer-motion": "^10.16.16",
+    "lucide-react": "^0.344.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.48.2",
+    "react-hot-toast": "^2.4.1",
+    "react-icons": "^5.5.0",
+    "react-redux": "^9.0.4",
+    "react-router-dom": "^6.20.1",
+    "recharts": "^2.8.0",
+    "sockjs-client": "^1.6.1",
+    "stompjs": "^2.3.3",
+    "yup": "^1.4.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.1",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@types/sockjs-client": "^1.5.4",
+    "@vitejs/plugin-react": "^4.7.0",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.9.1",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.11",
+    "globals": "^15.9.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.3.0",
+    "vite": "^5.4.20"
+  }
 }
-</file>
-
-<file path="backend/src/main/java/com/collabris/service/UserService.java">
-// File path: backend/src/main/java/com/collabris/service/UserService.java
-package com.collabris.service;
-
-import com.collabris.dto.request.AdminUserUpdateRequest;
-import com.collabris.dto.response.UserResponse;
-import com.collabris.entity.Role;
-import com.collabris.entity.User;
-import com.collabris.repository.RoleRepository;
-import com.collabris.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-@Service
-@Transactional
-public class UserService {
-
-    @Autowired
-    private UserRepository userRepository;
-    @Autowired
-    private RoleRepository roleRepository;
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
-
-    public User saveUser(User user) {
-        User savedUser = userRepository.save(user);
-        broadcastUserStats(); // Send WebSocket update
-        return savedUser;
-    }
-
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
-    public UserResponse getUserResponseByUsername(String username) {
-        User user = findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
-        return new UserResponse(user);
-    }
-    
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream().map(UserResponse::new).collect(Collectors.toList());
-    }
-
-    public User createUserByAdmin(AdminUserUpdateRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new IllegalArgumentException("Error: Username is already taken!");
-        }
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Error: Email is already in use!");
-        }
-
-        User user = new User(request.getUsername(), request.getEmail(), passwordEncoder.encode(request.getPassword()));
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEnabled(request.getEnabled() != null ? request.getEnabled() : true); // Default to enabled
-        
-        user.setRoles(getRolesFromStrings(request.getRoles()));
-        
-        return saveUser(user); // Use saveUser to trigger WebSocket event
-    }
-
-    public User updateUserByAdmin(Long userId, AdminUserUpdateRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Error: User not found."));
-
-        user.setUsername(request.getUsername());
-        user.setEmail(request.getEmail());
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        
-        if (request.getEnabled() != null) {
-            user.setEnabled(request.getEnabled());
-        }
-
-        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
-        }
-
-        if (request.getRoles() != null) {
-            user.setRoles(getRolesFromStrings(request.getRoles()));
-        }
-
-        // We call the repository directly here since it's an update, not a new user.
-        return userRepository.save(user);
-    }
-
-    public void deleteUserByAdmin(Long userId) {
-        userRepository.deleteById(userId);
-        broadcastUserStats(); // Send WebSocket update
-    }
-
-    // Helper method to convert role strings to Role entities
-    private Set<Role> getRolesFromStrings(Set<String> strRoles) {
-        Set<Role> roles = new HashSet<>();
-        if (strRoles == null || strRoles.isEmpty()) {
-            roles.add(roleRepository.findByName(Role.ERole.MEMBER)
-                .orElseThrow(() -> new RuntimeException("Error: Role MEMBER is not found.")));
-        } else {
-            strRoles.forEach(role -> {
-                switch (role.toUpperCase()) {
-                    case "ADMIN":
-                        roles.add(roleRepository.findByName(Role.ERole.ADMIN)
-                            .orElseThrow(() -> new RuntimeException("Error: Role ADMIN is not found.")));
-                        break;
-                    case "MANAGER":
-                        roles.add(roleRepository.findByName(Role.ERole.MANAGER)
-                            .orElseThrow(() -> new RuntimeException("Error: Role MANAGER is not found.")));
-                        break;
-                    default:
-                        roles.add(roleRepository.findByName(Role.ERole.MEMBER)
-                            .orElseThrow(() -> new RuntimeException("Error: Role MEMBER is not found.")));
-                        break;
-                }
-            });
-        }
-        return roles;
-    }
-
-    // Helper to send WebSocket updates
-    private void broadcastUserStats() {
-        long totalUsers = userRepository.count();
-        messagingTemplate.convertAndSend("/topic/dashboard/stats", Map.of("totalUsers", totalUsers));
-    }
-}
-</file>
-
-<file path="frontend/src/hooks/useWebSocket.ts">
-import { useEffect, useRef, useState } from "react";
-import { Client, IMessage } from "@stomp/stompjs";
-
-const useWebSocket = (url: string, onMessage: (msg: IMessage) => void) => {
-  const clientRef = useRef<Client | null>(null);
-  const [connected, setConnected] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
-
-  useEffect(() => {
-    const connect = () => {
-      if (clientRef.current) return; // Prevent duplicate connects
-
-      const stompClient = new Client({
-        brokerURL: url.startsWith("ws") ? url : url.replace("http", "ws"),
-        reconnectDelay: 5000,
-        onConnect: () => {
-          console.log("[WebSocket] ✅ Connected");
-          setConnected(true);
-          setRetryCount(0);
-        },
-        onDisconnect: () => {
-          console.log("[WebSocket] ❌ Disconnected");
-          setConnected(false);
-        },
-        onStompError: (frame) => {
-          console.error("[WebSocket] STOMP error:", frame.headers["message"]);
-        },
-        onWebSocketClose: () => {
-          console.log("[WebSocket] 🔌 Closed");
-          setConnected(false);
-
-          if (retryCount < MAX_RETRIES) {
-            setRetryCount((r) => r + 1);
-            console.log(`[WebSocket] Reconnecting... (${retryCount + 1}/${MAX_RETRIES})`);
-            setTimeout(connect, 5000);
-          } else {
-            console.warn("[WebSocket] Reconnect attempts exceeded. Giving up.");
-          }
-        },
-        onUnhandledMessage: onMessage,
-      });
-
-      stompClient.activate();
-      clientRef.current = stompClient;
-    };
-
-    connect();
-
-    return () => {
-      console.log("🧹 Cleaning up WebSocket...");
-      clientRef.current?.deactivate();
-      clientRef.current = null;
-    };
-  }, [url, onMessage, retryCount]);
-
-  const sendMessage = (destination: string, body: any) => {
-    if (clientRef.current?.connected) {
-      clientRef.current.publish({ destination, body: JSON.stringify(body) });
-    }
-  };
-
-  return { connected, sendMessage };
-};
-
-export default useWebSocket;
 </file>
 
 <file path="frontend/src/pages/Dashboard/ManagerDashboard.jsx">
@@ -8608,6 +8455,45 @@ const ProjectsPage = () => {
 export default ProjectsPage;
 </file>
 
+<file path="frontend/src/services/chatService.ts">
+import apiClient from './apiClient';
+import { ChatMessage } from '../types';
+
+export interface ChatMessageRequest {
+    content: string;
+}
+
+/**
+ * Fetches the message history for a specific project's chat room.
+ * @param projectId The ID of the project.
+ * @returns A promise that resolves to an array of chat messages.
+ */
+export const getProjectMessages = async (projectId: number | string): Promise<ChatMessage[]> => {
+    const response = await apiClient.get(`/api/chat/projects/${projectId}/messages`);
+    return response;
+};
+
+/**
+ * Fetches messages for a generic chat room (not tied to a project).
+ * @param roomId The ID of the chat room.
+ * @returns A promise that resolves to an array of chat messages.
+ */
+export const getMessages = async (roomId: number | string): Promise<ChatMessage[]> => {
+  const response = await apiClient.get(`/api/chat/rooms/${roomId}/messages`);
+  return response;
+};
+
+/**
+ * Sends a message to a generic chat room.
+ * @param messageData An object containing the chat room ID and message content.
+ * @returns A promise that resolves to the saved chat message.
+ */
+export const sendMessage = async (messageData: { chatRoomId: number; content: string }): Promise<ChatMessage> => {
+  const response = await apiClient.post('/api/chat/messages', messageData);
+  return response;
+};
+</file>
+
 <file path="frontend/src/services/dashboardService.ts">
 // File path: frontend/src/services/dashboardService.ts
 import apiClient from './apiClient';
@@ -8677,6 +8563,83 @@ export default defineConfig({
     },
   },
 });
+</file>
+
+<file path="backend/src/main/java/com/collabris/controller/ProjectController.java">
+package com.collabris.controller;
+
+import com.collabris.dto.request.ProjectRequest;
+import com.collabris.dto.response.ProjectResponse;
+import com.collabris.entity.User;
+import com.collabris.service.ProjectService;
+import com.collabris.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/projects")
+public class ProjectController {
+
+    @Autowired
+    private ProjectService projectService;
+    @Autowired
+    private UserService userService;
+
+    private User getCurrentUser(UserDetails userDetails) {
+        return userService.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Error: Authenticated user not found in database."));
+    }
+
+    @PostMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ProjectResponse> createProject(@RequestBody ProjectRequest request, @AuthenticationPrincipal UserDetails userDetails) {
+        // FIX: Service now returns the correct DTO directly
+        return ResponseEntity.ok(projectService.createProject(request, getCurrentUser(userDetails)));
+    }
+
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ProjectResponse>> getAllForCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(projectService.getProjectsByMemberId(getCurrentUser(userDetails).getId()));
+    }
+
+    @GetMapping("/{projectId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId) {
+        return ResponseEntity.ok(projectService.getProjectById(projectId));
+    }
+
+    @PutMapping("/{projectId}")
+    @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
+    public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long projectId, @RequestBody ProjectRequest request) {
+        // FIX: Service now returns the correct DTO directly
+        return ResponseEntity.ok(projectService.updateProject(projectId, request));
+    }
+
+    @DeleteMapping("/{projectId}")
+    @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
+    public ResponseEntity<Void> deleteProject(@PathVariable Long projectId) {
+        projectService.deleteProject(projectId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{projectId}/members/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
+    public ResponseEntity<ProjectResponse> addMemberToProject(@PathVariable Long projectId, @PathVariable Long userId) {
+        return ResponseEntity.ok(projectService.addMemberToProject(projectId, userId));
+    }
+
+    @DeleteMapping("/{projectId}/members/{userId}")
+    @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
+    public ResponseEntity<ProjectResponse> removeMemberFromProject(@PathVariable Long projectId, @PathVariable Long userId) {
+        return ResponseEntity.ok(projectService.removeMemberFromProject(projectId, userId));
+    }
+}
 </file>
 
 <file path="backend/src/main/java/com/collabris/dto/response/ChatMessageResponse.java">
@@ -8899,6 +8862,220 @@ public class ChatService {
 }
 </file>
 
+<file path="backend/src/main/java/com/collabris/service/UserService.java">
+package com.collabris.service;
+
+import com.collabris.dto.request.AdminUserUpdateRequest;
+import com.collabris.dto.response.UserResponse;
+import com.collabris.entity.Role;
+import com.collabris.entity.User;
+import com.collabris.repository.RoleRepository;
+import com.collabris.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+public class UserService {
+
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private RoleRepository roleRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    public User saveUser(User user) {
+        User savedUser = userRepository.save(user);
+        broadcastUserStats(); // Send WebSocket update
+        return savedUser;
+    }
+
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+    public UserResponse getUserResponseByUsername(String username) {
+        User user = findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+        return new UserResponse(user);
+    }
+    
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream().map(UserResponse::new).collect(Collectors.toList());
+    }
+
+    public User createUserByAdmin(AdminUserUpdateRequest request) {
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("Error: Username is already taken!");
+        }
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Error: Email is already in use!");
+        }
+
+        User user = new User(request.getUsername(), request.getEmail(), passwordEncoder.encode(request.getPassword()));
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setEnabled(request.getEnabled() != null ? request.getEnabled() : true);
+        
+        user.setRoles(getRolesFromStrings(request.getRoles()));
+        
+        return saveUser(user);
+    }
+
+    public User updateUserByAdmin(Long userId, AdminUserUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Error: User not found."));
+
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        
+        if (request.getEnabled() != null) {
+            user.setEnabled(request.getEnabled());
+        }
+
+        if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        if (request.getRoles() != null) {
+            user.setRoles(getRolesFromStrings(request.getRoles()));
+        }
+        
+        return userRepository.save(user);
+    }
+
+    public void deleteUserByAdmin(Long userId) {
+        userRepository.deleteById(userId);
+        broadcastUserStats();
+    }
+    // The logic here is now much cleaner, more explicit, and correct.
+    private Set<Role> getRolesFromStrings(Set<String> strRoles) {
+        Set<Role> roles = new HashSet<>();
+
+        // If the incoming role set is null or empty, default to MEMBER.
+        if (strRoles == null || strRoles.isEmpty()) {
+            roles.add(roleRepository.findByName(Role.ERole.MEMBER)
+                .orElseThrow(() -> new RuntimeException("Error: Default role MEMBER is not found.")));
+            return roles;
+        }
+
+        // Iterate through the provided role strings from the request.
+        for (String role : strRoles) {
+            switch (role.toUpperCase()) {
+                case "ADMIN":
+                    roles.add(roleRepository.findByName(Role.ERole.ADMIN)
+                        .orElseThrow(() -> new RuntimeException("Error: Role ADMIN is not found.")));
+                    break;
+                case "MANAGER":
+                    roles.add(roleRepository.findByName(Role.ERole.MANAGER)
+                        .orElseThrow(() -> new RuntimeException("Error: Role MANAGER is not found.")));
+                    break;
+                case "MEMBER":
+                    roles.add(roleRepository.findByName(Role.ERole.MEMBER)
+                        .orElseThrow(() -> new RuntimeException("Error: Role MEMBER is not found.")));
+                    break;
+                // We intentionally do not have a default case.
+                // This makes the code safer by ignoring any invalid role strings.
+            }
+        }
+        
+        // As a final safety check, if no valid roles were found after looping,
+        // ensure the user still gets the default MEMBER role.
+        if (roles.isEmpty()){
+             roles.add(roleRepository.findByName(Role.ERole.MEMBER)
+                .orElseThrow(() -> new RuntimeException("Error: Default role MEMBER is not found.")));
+        }
+
+        return roles;
+    }
+    
+
+    private void broadcastUserStats() {
+        long totalUsers = userRepository.count();
+        messagingTemplate.convertAndSend("/topic/dashboard/stats", Map.of("totalUsers", totalUsers));
+    }
+}
+</file>
+
+<file path="backend/src/main/resources/application.properties">
+# Database Configuration
+spring.datasource.url=jdbc:postgresql://ep-aged-pine-aevx5u5z-pooler.c-2.us-east-2.aws.neon.tech:5432/neondb?sslmode=require&channel_binding=require
+spring.datasource.username=neondb_owner
+spring.datasource.password=npg_EKxh9oIm5FdZ
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+# --- ROBUST HIKARI SETTINGS FOR SERVERLESS/CLOUD DATABASES ---
+spring.datasource.hikari.connection-timeout=20000
+spring.datasource.hikari.max-lifetime=1800000
+spring.datasource.hikari.keepalive-time=600000
+spring.datasource.hikari.idle-timeout=600000
+# THIS IS THE FINAL KEY SETTING:
+# It forces Hikari to test if a connection is still alive before using it.
+# This prevents the "connection has been closed" warnings.
+spring.datasource.hikari.validation-timeout=3000
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.open-in-view=false
+
+# JWT Configuration
+jwt.secret=c40031d66765c9a385adb9980ceb96dcd1bf21aba01b96978357b22a255e82f9
+jwt.expiration=86400000
+
+# Server Configuration
+server.port=8080
+
+# Swagger/OpenAPI Configuration
+springdoc.api-docs.path=/v3/api-docs
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.swagger-ui.operationsSorter=method
+
+# CORS Configuration - Update for production
+cors.allowed-origins=http://localhost:5173
+
+# Jackson Configuration
+spring.jackson.serialization.fail-on-empty-beans=false
+
+# File Upload Configuration
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+file.upload-dir=uploads
+
+# Email Configuration
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=sibomanaelissa71@gmail.com
+spring.mail.password=wdhapdculcihbvnk
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# App Mail Configuration
+app.mail.enabled=true
+app.mail.from=no-reply@collabris.com
+
+# Logging Configuration
+logging.level.com.collabris=INFO
+logging.level.org.springframework.security=INFO
+</file>
+
 <file path="frontend/src/components/Admin/UserModal.jsx">
 import React, { useState, useEffect } from 'react';
 import {
@@ -9028,6 +9205,80 @@ export const useTheme = () => {
   // It returns the theme object and the theme mode string.
   return [theme, themeMode] as const;
 };
+</file>
+
+<file path="frontend/src/hooks/useWebSocket.ts">
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Client, IMessage, StompSubscription } from "@stomp/stompjs";
+import { useAppSelector } from "../store/store";
+import { selectToken } from "../store/slices/authSlice"; 
+
+const useWebSocket = (url: string) => {
+  const clientRef = useRef<Client | null>(null);
+  const [connected, setConnected] = useState(false);
+  const token = useAppSelector(selectToken); // Get the auth token from Redux
+
+  const subscribe = useCallback((destination: string, callback: (msg: IMessage) => void): StompSubscription | null => {
+    if (clientRef.current?.connected) {
+      console.log(`[WebSocket] Subscribing to ${destination}`);
+      return clientRef.current.subscribe(destination, callback);
+    }
+    console.warn(`[WebSocket] Cannot subscribe. Client not connected.`);
+    return null;
+  }, []);
+
+  const sendMessage = (destination: string, body: any) => {
+    if (clientRef.current?.connected) {
+      clientRef.current.publish({ destination, body: JSON.stringify(body) });
+    } else {
+      console.error("[WebSocket] Cannot send message. Client not connected.");
+    }
+  };
+
+  useEffect(() => {
+    // Don't try to connect if there's no token
+    if (!token) {
+        console.log("[WebSocket] No auth token found. Connection delayed.");
+        return;
+    }
+
+    const stompClient = new Client({
+      brokerURL: url.replace("http", "ws"),
+      connectHeaders: {
+        Authorization: `Bearer ${token}`,
+      },
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log("[WebSocket] ✅ Connected");
+        setConnected(true);
+      },
+      onDisconnect: () => {
+        console.log("[WebSocket] ❌ Disconnected");
+        setConnected(false);
+      },
+      onStompError: (frame) => {
+        console.error("[WebSocket] STOMP error:", frame.headers["message"], frame.body);
+      },
+      onWebSocketClose: () => {
+        console.log("[WebSocket] 🔌 Connection closed");
+        setConnected(false);
+      },
+    });
+
+    stompClient.activate();
+    clientRef.current = stompClient;
+
+    return () => {
+      console.log("🧹 Cleaning up WebSocket connection...");
+      clientRef.current?.deactivate();
+      clientRef.current = null;
+    };
+  }, [url, token]);
+
+  return { connected, sendMessage, subscribe };
+};
+
+export default useWebSocket;
 </file>
 
 <file path="frontend/src/pages/Dashboard/AdminDashboard.jsx">
@@ -9473,146 +9724,6 @@ export interface WebSocketMessage {
 }
 </file>
 
-<file path="backend/src/main/java/com/collabris/controller/ProjectController.java">
-package com.collabris.controller;
-
-import com.collabris.dto.request.ProjectRequest;
-import com.collabris.dto.response.ProjectResponse;
-import com.collabris.entity.User;
-import com.collabris.service.ProjectService;
-import com.collabris.service.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
-
-@RestController
-@RequestMapping("/api/projects")
-public class ProjectController {
-
-    @Autowired
-    private ProjectService projectService;
-    @Autowired
-    private UserService userService;
-
-    private User getCurrentUser(UserDetails userDetails) {
-        return userService.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Error: Authenticated user not found in database."));
-    }
-
-    @PostMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ProjectResponse> createProject(@RequestBody ProjectRequest request, @AuthenticationPrincipal UserDetails userDetails) {
-        // FIX: Service now returns the correct DTO directly
-        return ResponseEntity.ok(projectService.createProject(request, getCurrentUser(userDetails)));
-    }
-
-    @GetMapping
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<ProjectResponse>> getAllForCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(projectService.getProjectsByMemberId(getCurrentUser(userDetails).getId()));
-    }
-
-    @GetMapping("/{projectId}")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<ProjectResponse> getProject(@PathVariable Long projectId) {
-        return ResponseEntity.ok(projectService.getProjectById(projectId));
-    }
-
-    @PutMapping("/{projectId}")
-    @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
-    public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long projectId, @RequestBody ProjectRequest request) {
-        // FIX: Service now returns the correct DTO directly
-        return ResponseEntity.ok(projectService.updateProject(projectId, request));
-    }
-
-    @DeleteMapping("/{projectId}")
-    @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
-    public ResponseEntity<Void> deleteProject(@PathVariable Long projectId) {
-        projectService.deleteProject(projectId);
-        return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{projectId}/members/{userId}")
-    @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
-    public ResponseEntity<ProjectResponse> addMemberToProject(@PathVariable Long projectId, @PathVariable Long userId) {
-        return ResponseEntity.ok(projectService.addMemberToProject(projectId, userId));
-    }
-
-    @DeleteMapping("/{projectId}/members/{userId}")
-    @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
-    public ResponseEntity<ProjectResponse> removeMemberFromProject(@PathVariable Long projectId, @PathVariable Long userId) {
-        return ResponseEntity.ok(projectService.removeMemberFromProject(projectId, userId));
-    }
-}
-</file>
-
-<file path="backend/src/main/resources/application.properties">
-# Database Configuration
-spring.datasource.url=jdbc:postgresql://ep-aged-pine-aevx5u5z-pooler.c-2.us-east-2.aws.neon.tech:5432/neondb?sslmode=require&channel_binding=require
-spring.datasource.username=neondb_owner
-spring.datasource.password=npg_EKxh9oIm5FdZ
-spring.datasource.driver-class-name=org.postgresql.Driver
-
-# --- ROBUST HIKARI SETTINGS FOR SERVERLESS/CLOUD DATABASES ---
-spring.datasource.hikari.connection-timeout=20000
-spring.datasource.hikari.max-lifetime=1800000
-spring.datasource.hikari.keepalive-time=600000
-spring.datasource.hikari.idle-timeout=600000
-# THIS IS THE FINAL KEY SETTING:
-# It forces Hikari to test if a connection is still alive before using it.
-# This prevents the "connection has been closed" warnings.
-spring.datasource.hikari.validation-timeout=3000
-
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.properties.hibernate.format_sql=true
-spring.jpa.open-in-view=false
-
-# JWT Configuration
-jwt.secret=c40031d66765c9a385adb9980ceb96dcd1bf21aba01b96978357b22a255e82f9
-jwt.expiration=86400000
-
-# Server Configuration
-server.port=8080
-
-# Swagger/OpenAPI Configuration
-springdoc.api-docs.path=/v3/api-docs
-springdoc.swagger-ui.path=/swagger-ui.html
-springdoc.swagger-ui.operationsSorter=method
-
-# CORS Configuration - Update for production
-cors.allowed-origins=http://localhost:5173
-
-# Jackson Configuration
-spring.jackson.serialization.fail-on-empty-beans=false
-
-# File Upload Configuration
-spring.servlet.multipart.max-file-size=10MB
-spring.servlet.multipart.max-request-size=10MB
-file.upload-dir=uploads
-
-# Email Configuration
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=sibomanaelissa71@gmail.com
-spring.mail.password=wdhapdculcihbvnk
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-
-# App Mail Configuration
-app.mail.enabled=true
-app.mail.from=no-reply@collabris.com
-
-# Logging Configuration
-logging.level.com.collabris=INFO
-logging.level.org.springframework.security=INFO
-</file>
-
 <file path="backend/src/main/java/com/collabris/entity/Project.java">
 package com.collabris.entity;
 
@@ -9815,142 +9926,6 @@ public class ProjectService {
 }
 </file>
 
-<file path="frontend/src/pages/Projects/ProjectDetailPage.jsx">
-import React, { useEffect, useState, useCallback, useRef } from "react";
-import { useParams } from "react-router-dom";
-import useWebSocket from "../../hooks/useWebSocket";
-import { FiSend } from "react-icons/fi";
-
-const ProjectDetailPage = () => {
-  const { id } = useParams();
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const messagesEndRef = useRef(null);
-
-  // --- Handle incoming WebSocket messages
-  const handleMessage = useCallback((msg) => {
-    try {
-      const body = JSON.parse(msg.body);
-      setMessages((prev) => [
-        ...prev,
-        { sender: body.sender || "Server", content: body.content, self: false, time: new Date() },
-      ]);
-    } catch (err) {
-      console.error("[WebSocket] Invalid message", err);
-    }
-  }, []);
-
-  // --- Use WebSocket hook
-  const { connected, sendMessage } = useWebSocket("ws://localhost:8080/ws", handleMessage);
-
-  // --- Send message + render locally
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const newMessage = {
-      sender: "You",
-      content: input,
-      self: true,
-      time: new Date(),
-    };
-
-    // render locally
-    setMessages((prev) => [...prev, newMessage]);
-
-    // send to backend
-    sendMessage("/app/chat.sendMessage", {
-      projectId: id,
-      content: input,
-    });
-
-    setInput("");
-  };
-
-  // --- Auto-scroll on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 p-6">
-      <div className="max-w-3xl mx-auto w-full flex flex-col flex-1 shadow-lg rounded-2xl bg-white overflow-hidden border border-gray-200">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-800">
-            Project Chat — <span className="text-indigo-600">#{id}</span>
-          </h2>
-          <div
-            className={`flex items-center gap-2 text-sm ${
-              connected ? "text-green-600" : "text-red-500"
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                connected ? "bg-green-500" : "bg-red-400"
-              }`}
-            ></span>
-            {connected ? "Connected" : "Disconnected"}
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-          {messages.length === 0 ? (
-            <p className="text-gray-400 text-center mt-10">
-              No messages yet. Start the conversation 👇
-            </p>
-          ) : (
-            messages.map((m, i) => (
-              <div
-                key={i}
-                className={`flex ${m.self ? "justify-end" : "justify-start"}`}
-              >
-                <div
-                  className={`px-4 py-2 rounded-xl max-w-xs text-sm shadow-sm ${
-                    m.self
-                      ? "bg-indigo-600 text-white"
-                      : "bg-white text-gray-800 border border-gray-200"
-                  }`}
-                >
-                  <div className="text-xs opacity-75 mb-1">
-                    {m.sender} • {m.time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </div>
-                  {m.content}
-                </div>
-              </div>
-            ))
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input */}
-        <div className="border-t border-gray-200 bg-white p-4 flex items-center gap-3">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 bg-gray-100 border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400"
-          />
-          <button
-            onClick={handleSend}
-            disabled={!connected}
-            className={`flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition-all ${
-              connected
-                ? "bg-indigo-600 hover:bg-indigo-700 text-white"
-                : "bg-gray-300 text-gray-600 cursor-not-allowed"
-            }`}
-          >
-            <FiSend className="text-lg" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default ProjectDetailPage;
-</file>
-
 <file path="frontend/src/App.tsx">
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
@@ -10041,6 +10016,152 @@ const App = () => (
 );
 
 export default App;
+</file>
+
+<file path="frontend/src/pages/Projects/ProjectDetailPage.jsx">
+import React, { useEffect, useState, useCallback, useRef } from "react";
+import { useParams } from "react-router-dom";
+import { Box, CircularProgress, Typography, TextField, IconButton } from "@mui/material";
+import { Send as SendIcon } from '@mui/icons-material';
+import toast from "react-hot-toast";
+
+// --- Redux Imports ---
+import { useAppDispatch, useAppSelector } from "../../store/store";
+import { selectUser } from "../../store/slices/authSlice";
+import { 
+    fetchMessagesForProject, 
+    addMessage, 
+    selectMessagesForProject, 
+    selectChatLoadingStatus 
+} from "../../store/slices/chatSlice";
+
+// --- Service and Hook Imports ---
+import useWebSocket from "../../hooks/useWebSocket";
+import Layout from "../../components/Layout/Layout";
+
+const ProjectDetailPage = () => {
+  const { projectId } = useParams();
+  const dispatch = useAppDispatch();
+
+  // --- Get data from Redux store ---
+  const currentUser = useAppSelector(selectUser);
+  const messages = useAppSelector(selectMessagesForProject(projectId));
+  const loadingStatus = useAppSelector(selectChatLoadingStatus);
+
+  // --- Local state for input only ---
+  const [input, setInput] = useState("");
+  const messagesEndRef = useRef(null);
+
+  const { connected, sendMessage, subscribe } = useWebSocket("ws://localhost:8080/ws");
+
+  // --- Effect to fetch initial messages (will only fetch if not in store) ---
+  useEffect(() => {
+    if (projectId) {
+      dispatch(fetchMessagesForProject(projectId));
+    }
+  }, [projectId, dispatch]);
+
+  // --- Callback for incoming WebSocket messages ---
+  const handleIncomingMessage = useCallback((msg) => {
+    try {
+      const body = JSON.parse(msg.body);
+      if (body.sender.id === currentUser?.id) return; // Don't re-add our own messages
+      
+      // Dispatch action to add the new message to the Redux store
+      dispatch(addMessage({ projectId, message: body }));
+
+    } catch (err) {
+      console.error("[WebSocket] Could not parse incoming message:", err);
+    }
+  }, [projectId, currentUser?.id, dispatch]);
+
+  // --- Subscribe to WebSocket topic ---
+  useEffect(() => {
+    if (connected && projectId) {
+      const destination = `/topic/project/${projectId}/chat`;
+      const subscription = subscribe(destination, handleIncomingMessage);
+      return () => subscription?.unsubscribe();
+    }
+  }, [connected, projectId, subscribe, handleIncomingMessage]);
+  
+  // --- Auto-scroll on new messages ---
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // --- Handle sending a message ---
+  const handleSend = () => {
+    if (!input.trim() || !projectId || !currentUser) return;
+
+    // Send to backend via WebSocket
+    sendMessage(`/app/chat/${projectId}/sendMessage`, { content: input });
+
+    // Optimistically add to Redux store
+    const optimisticMessage = {
+      id: `temp-${Date.now()}`,
+      sender: currentUser,
+      content: input,
+      timestamp: new Date().toISOString(), // Use ISO string for consistency
+    };
+    dispatch(addMessage({ projectId, message: optimisticMessage }));
+    
+    setInput("");
+  };
+
+  const handleKeyPress = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleSend();
+    }
+  };
+
+  // --- Render logic remains very similar ---
+  return (
+    <Layout>
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
+            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6">Project Chat</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: connected ? 'success.main' : 'error.main' }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'currentColor' }} />
+                    <Typography variant="caption">{connected ? "Connected" : "Disconnected"}</Typography>
+                </Box>
+            </Box>
+
+            <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 2 }}>
+                {loadingStatus === 'loading' ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                        <CircularProgress />
+                    </Box>
+                ) : messages.length === 0 ? (
+                    <Typography sx={{ textAlign: 'center', color: 'text.secondary', mt: 4 }}>
+                        No messages yet. Start the conversation!
+                    </Typography>
+                ) : (
+                    messages.map((msg) => (
+                        <Box key={msg.id} sx={{ mb: 2, display: 'flex', justifyContent: msg.sender.id === currentUser?.id ? 'flex-end' : 'flex-start' }}>
+                            <Box sx={{ maxWidth: '70%', bgcolor: msg.sender.id === currentUser?.id ? 'primary.main' : 'background.paper', color: msg.sender.id === currentUser?.id ? 'primary.contrastText' : 'text.primary', p: 1.5, borderRadius: 2, boxShadow: 1 }}>
+                                <Typography variant="caption" sx={{ display: 'block', fontWeight: 'bold' }}>{msg.sender.username}</Typography>
+                                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{msg.content}</Typography>
+                                <Typography variant="caption" sx={{ display: 'block', textAlign: 'right', opacity: 0.7, mt: 0.5 }}>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Typography>
+                            </Box>
+                        </Box>
+                    ))
+                )}
+                <div ref={messagesEndRef} />
+            </Box>
+
+            <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider', display: 'flex', gap: 2 }}>
+                <TextField fullWidth multiline maxRows={4} variant="outlined" placeholder="Type a message..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={handleKeyPress} disabled={!connected} />
+                <IconButton color="primary" onClick={handleSend} disabled={!connected || !input.trim()}>
+                    <SendIcon />
+                </IconButton>
+            </Box>
+        </Box>
+    </Layout>
+  );
+};
+
+export default ProjectDetailPage;
 </file>
 
 </files>
