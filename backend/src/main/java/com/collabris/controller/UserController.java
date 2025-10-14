@@ -1,10 +1,11 @@
-// File Path: backend/src/main/java/com/collabris/controller/UserController.java
 package com.collabris.controller;
 
 import com.collabris.dto.request.AdminUserUpdateRequest;
 import com.collabris.dto.response.MessageResponse;
+import com.collabris.dto.response.TaskResponse;
 import com.collabris.dto.response.UserResponse;
 import com.collabris.entity.User;
+import com.collabris.service.TaskService;
 import com.collabris.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,18 +23,39 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    // --- EXISTING ENDPOINT (NO CHANGE) ---
+    @Autowired
+    private TaskService taskService;
+
+    // Helper to get the current user entity from security context
+    private User getCurrentUserEntity(UserDetails userDetails) {
+        if (userDetails == null) {
+            return null;
+        }
+        return userService.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("Error: Authenticated user not found."));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
+        User user = getCurrentUserEntity(userDetails);
+        if (user == null) {
             return ResponseEntity.status(401).build();
         }
-        User user = userService.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("Error: Authenticated user not found."));
         return ResponseEntity.ok(new UserResponse(user));
     }
 
-    // --- NEW ADMIN ENDPOINTS ---
+    /**
+     * Endpoint to get all tasks assigned to the currently logged-in user.
+     */
+    @GetMapping("/me/tasks")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TaskResponse>> getMyAssignedTasks(@AuthenticationPrincipal UserDetails userDetails) {
+        User currentUser = getCurrentUserEntity(userDetails);
+        List<TaskResponse> tasks = taskService.getTasksAssignedToUser(currentUser.getId());
+        return ResponseEntity.ok(tasks);
+    }
+
+    // --- ADMIN ENDPOINTS ---
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -66,7 +88,6 @@ public class UserController {
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
-        // Optional: Add logic to prevent an admin from deleting themselves
         userService.deleteUserByAdmin(userId);
         return ResponseEntity.ok(new MessageResponse("User deleted successfully!"));
     }
