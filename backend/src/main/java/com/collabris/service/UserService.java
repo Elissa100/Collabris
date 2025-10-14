@@ -8,6 +8,7 @@ import com.collabris.entity.User;
 import com.collabris.repository.RoleRepository;
 import com.collabris.repository.UserRepository;
 import com.collabris.security.jwt.JwtUtils;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
@@ -38,6 +39,8 @@ public class UserService {
     private SimpMessagingTemplate messagingTemplate;
     @Autowired
     private JwtUtils jwtUtils;
+    @Autowired
+    private EmailService emailService;
 
     @Transactional(readOnly = true)
     public JwtResponse generateJwtResponse(Authentication authentication) {
@@ -56,26 +59,6 @@ public class UserService {
         return new JwtResponse(jwt, user);
     }
 
-    public User saveUser(User user) {
-        User savedUser = userRepository.save(user);
-        broadcastUserStats();
-        return savedUser;
-    }
-
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
-    }
-
-    public UserResponse getUserResponseByUsername(String username) {
-        User user = findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
-        return new UserResponse(user);
-    }
-    
-    public List<UserResponse> getAllUsers() {
-        return userRepository.findAll().stream().map(UserResponse::new).collect(Collectors.toList());
-    }
-
     public User createUserByAdmin(AdminUserUpdateRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("Error: Username is already taken!");
@@ -84,14 +67,34 @@ public class UserService {
             throw new IllegalArgumentException("Error: Email is already in use!");
         }
 
-        User user = new User(request.getUsername(), request.getEmail(), passwordEncoder.encode(request.getPassword()));
+        String generatedPassword = RandomStringUtils.randomAlphanumeric(10);
+
+        User user = new User(
+            request.getUsername(), 
+            request.getEmail(), 
+            passwordEncoder.encode(generatedPassword)
+        );
+        
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setEnabled(request.getEnabled() != null ? request.getEnabled() : true);
-        
+        user.setEnabled(true);
         user.setRoles(getRolesFromStrings(request.getRoles()));
         
-        return saveUser(user);
+        User savedUser = saveUser(user);
+
+        emailService.sendEmail(
+            savedUser.getEmail(), 
+            "Welcome to Collabris!", 
+            "templates/admin-welcome-email.html",
+            Map.of(
+                "firstName", savedUser.getFirstName(),
+                "username", savedUser.getUsername(),
+                "password", generatedPassword,
+                "loginUrl", "http://localhost:5173/login"
+            )
+        );
+
+        return savedUser;
     }
 
     public User updateUserByAdmin(Long userId, AdminUserUpdateRequest request) {
@@ -116,6 +119,26 @@ public class UserService {
         }
         
         return userRepository.save(user);
+    }
+    
+    public User saveUser(User user) {
+        User savedUser = userRepository.save(user);
+        broadcastUserStats();
+        return savedUser;
+    }
+
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
+    public UserResponse getUserResponseByUsername(String username) {
+        User user = findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found with username: " + username));
+        return new UserResponse(user);
+    }
+    
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream().map(UserResponse::new).collect(Collectors.toList());
     }
 
     public void deleteUserByAdmin(Long userId) {

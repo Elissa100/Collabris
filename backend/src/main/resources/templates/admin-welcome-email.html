@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Collabris!</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7; color: #333; }
+        .container { max-width: 600px; margin: 40px auto; background-color: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 600; }
+        .content { padding: 40px 30px; text-align: left; line-height: 1.6; }
+        .credentials-box { background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .credentials-box p { margin: 10px 0; }
+        .credentials-box strong { color: #1f2937; }
+        .login-button { display: block; width: fit-content; margin: 30px auto; padding: 12px 25px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 500; }
+        .warning { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-top: 20px; color: #92400e; }
+        .footer { background-color: #f9fafb; padding: 20px; text-align: center; font-size: 14px; color: #6b7280; border-top: 1px solid #e5e7eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to Collabris!</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hi <strong>{{firstName}}</strong>,</p>
+            <p>An administrator has created an account for you on the Collabris platform. You can now log in using the credentials below.</p>
+
+            <div class="credentials-box">
+                <p><strong>Username:</strong> {{username}}</p>
+                <p><strong>Temporary Password:</strong> <code>{{password}}</code></p>
+            </div>
+
+            <p>You can log in by clicking the button below:</p>
+            <a href="{{loginUrl}}" class="login-button">Log In to Collabris</a>
+            
+            <div class="warning">
+                <strong>Important:</strong> For your security, we strongly recommend that you change your password immediately after your first login by visiting your Profile settings.
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 Collabris. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -31,3 +31,11 @@ export const updateTask = async (taskId: number, taskData: Partial<TaskRequest>)
 export const deleteTask = async (taskId: number): Promise<void> => {
     await apiClient.delete(`/api/tasks/${taskId}`);
 };
+
+/**
+ * Fetches all tasks assigned to the currently authenticated user.
+ */
+export const getMyAssignedTasks = async (): Promise<Task[]> => {
+    const response = await apiClient.get('/api/users/me/tasks');
+    return response;
+};
