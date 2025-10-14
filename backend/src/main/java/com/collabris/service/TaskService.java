@@ -45,7 +45,6 @@ public class TaskService {
         task.setProject(project);
         task.setCreator(creator);
 
-        // If an assignee ID is provided, find and set the assignee
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new NoSuchElementException("Assignee user not found with ID: " + request.getAssigneeId()));
@@ -79,6 +78,22 @@ public class TaskService {
                 .map(TaskResponse::new)
                 .collect(Collectors.toList());
     }
+    
+    /**
+     * Retrieves all tasks assigned to a specific user.
+     * @param userId The ID of the user.
+     * @return A list of task DTOs sorted by due date.
+     */
+    @Transactional(readOnly = true)
+    public List<TaskResponse> getTasksAssignedToUser(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new NoSuchElementException("User not found with ID: " + userId);
+        }
+        List<Task> tasks = taskRepository.findByAssigneeIdOrderByDueDateAsc(userId);
+        return tasks.stream()
+                .map(TaskResponse::new)
+                .collect(Collectors.toList());
+    }
 
     /**
      * Updates an existing task.
@@ -100,13 +115,12 @@ public class TaskService {
             task.setDueDate(request.getDueDate());
         }
 
-        // Handle updating the assignee
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new NoSuchElementException("Assignee user not found with ID: " + request.getAssigneeId()));
             task.setAssignee(assignee);
         } else {
-            task.setAssignee(null); // Allow un-assigning a task
+            task.setAssignee(null);
         }
 
         Task updatedTask = taskRepository.save(task);
