@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { User, LoginRequest, SignupRequest, AuthResponse } from '../../types';
 import * as authService from '../../services/authService';
+import { RootState } from '../store'; // Import RootState for the selector type
 
 interface AuthState {
   user: User | null;
@@ -95,7 +96,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isAuthenticated = true;
         state.token = action.payload.token;
-        state.user = action.payload.user; 
+        state.user = action.payload.user;
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
@@ -123,15 +124,16 @@ const authSlice = createSlice({
 
 export const { logout, clearError, setUser } = authSlice.actions;
 
-export const selectUser = (state: { auth: AuthState }) => state.auth.user;
-export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
-export const selectIsLoading = (state: { auth: AuthState }) => state.auth.isLoading;
-export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
-export const selectInitialLoad = (state: { auth: AuthState }) => state.auth.initialLoad;
+// --- SELECTORS ---
+export const selectUser = (state: RootState) => state.auth.user;
+export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
+export const selectIsLoading = (state: RootState) => state.auth.isLoading;
+export const selectAuthError = (state: RootState) => state.auth.error;
+export const selectInitialLoad = (state: RootState) => state.auth.initialLoad;
+export const selectIsAdmin = (state: RootState) => state.auth.user?.roles.some(role => role === 'ADMIN') || false;
 
 // --- THIS IS THE FIX ---
-// The `roles` array now contains strings, so we check the string directly.
-export const selectIsAdmin = (state: { auth: AuthState }) =>
-  state.auth.user?.roles.some(role => role === 'ADMIN') || false;
+// Add the missing selector for the authentication token.
+export const selectToken = (state: RootState) => state.auth.token;
 
 export default authSlice.reducer;

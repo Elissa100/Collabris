@@ -3,14 +3,16 @@ import { useDispatch, useSelector, TypedUseSelectorHook } from 'react-redux';
 import authReducer from './slices/authSlice';
 import themeReducer from './slices/themeSlice';
 import uiReducer from './slices/uiSlice';
-import userReducer from './slices/userSlice'; // Import the new reducer
+import userReducer from './slices/userSlice';
+import chatReducer from './slices/chatSlice'; // 1. Import the new reducer
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     theme: themeReducer,
     ui: uiReducer,
-    user: userReducer, // Add the user reducer to the store
+    user: userReducer,
+    chat: chatReducer, // 2. Add the chat reducer to the store
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
