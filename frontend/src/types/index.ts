@@ -92,10 +92,32 @@ export interface ChatMessage {
   editedAt?: string;
 }
 
+
 export interface ChatMessageRequest {
   content: string;
   messageType: ChatMessage['messageType'];
   chatRoomId: number;
+}
+
+export interface Task {
+  id: number;
+  title: string;
+  description?: string;
+  status: 'TO_DO' | 'IN_PROGRESS' | 'DONE';
+  dueDate?: string; // Will be an ISO date string like "2025-12-31"
+  projectId: number;
+  assignee?: User; // Assignee can be null
+  creator: User;
+  createdAt: string; // ISO datetime string
+  updatedAt: string; // ISO datetime string
+}
+
+export interface TaskRequest {
+  title: string;
+  description?: string;
+  status?: 'TO_DO' | 'IN_PROGRESS' | 'DONE';
+  dueDate?: string;
+  assigneeId?: number | null;
 }
 
 export interface ChatRoomRequest {
