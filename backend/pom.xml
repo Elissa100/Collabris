@@ -99,7 +99,6 @@
             <scope>test</scope>
         </dependency>
         
-        <!-- FIX: Change the scope of the H2 dependency -->
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
@@ -112,6 +111,12 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <!-- THIS IS THE FIX: Force the port to 8080 when running -->
+                <configuration>
+                    <arguments>
+                        <argument>--server.port=8080</argument>
+                    </arguments>
+                </configuration>
             </plugin>
         </plugins>
     </build>
