@@ -1,4 +1,3 @@
-// File path: backend/src/main/java/com/collabris/service/UserService.java
 package com.collabris.service;
 
 import com.collabris.dto.request.AdminUserUpdateRequest;
@@ -65,11 +64,11 @@ public class UserService {
         User user = new User(request.getUsername(), request.getEmail(), passwordEncoder.encode(request.getPassword()));
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
-        user.setEnabled(request.getEnabled() != null ? request.getEnabled() : true); // Default to enabled
+        user.setEnabled(request.getEnabled() != null ? request.getEnabled() : true);
         
         user.setRoles(getRolesFromStrings(request.getRoles()));
         
-        return saveUser(user); // Use saveUser to trigger WebSocket event
+        return saveUser(user);
     }
 
     public User updateUserByAdmin(Long userId, AdminUserUpdateRequest request) {
@@ -92,44 +91,56 @@ public class UserService {
         if (request.getRoles() != null) {
             user.setRoles(getRolesFromStrings(request.getRoles()));
         }
-
-        // We call the repository directly here since it's an update, not a new user.
+        
         return userRepository.save(user);
     }
 
     public void deleteUserByAdmin(Long userId) {
         userRepository.deleteById(userId);
-        broadcastUserStats(); // Send WebSocket update
+        broadcastUserStats();
     }
-
-    // Helper method to convert role strings to Role entities
+    // The logic here is now much cleaner, more explicit, and correct.
     private Set<Role> getRolesFromStrings(Set<String> strRoles) {
         Set<Role> roles = new HashSet<>();
+
+        // If the incoming role set is null or empty, default to MEMBER.
         if (strRoles == null || strRoles.isEmpty()) {
             roles.add(roleRepository.findByName(Role.ERole.MEMBER)
-                .orElseThrow(() -> new RuntimeException("Error: Role MEMBER is not found.")));
-        } else {
-            strRoles.forEach(role -> {
-                switch (role.toUpperCase()) {
-                    case "ADMIN":
-                        roles.add(roleRepository.findByName(Role.ERole.ADMIN)
-                            .orElseThrow(() -> new RuntimeException("Error: Role ADMIN is not found.")));
-                        break;
-                    case "MANAGER":
-                        roles.add(roleRepository.findByName(Role.ERole.MANAGER)
-                            .orElseThrow(() -> new RuntimeException("Error: Role MANAGER is not found.")));
-                        break;
-                    default:
-                        roles.add(roleRepository.findByName(Role.ERole.MEMBER)
-                            .orElseThrow(() -> new RuntimeException("Error: Role MEMBER is not found.")));
-                        break;
-                }
-            });
+                .orElseThrow(() -> new RuntimeException("Error: Default role MEMBER is not found.")));
+            return roles;
         }
+
+        // Iterate through the provided role strings from the request.
+        for (String role : strRoles) {
+            switch (role.toUpperCase()) {
+                case "ADMIN":
+                    roles.add(roleRepository.findByName(Role.ERole.ADMIN)
+                        .orElseThrow(() -> new RuntimeException("Error: Role ADMIN is not found.")));
+                    break;
+                case "MANAGER":
+                    roles.add(roleRepository.findByName(Role.ERole.MANAGER)
+                        .orElseThrow(() -> new RuntimeException("Error: Role MANAGER is not found.")));
+                    break;
+                case "MEMBER":
+                    roles.add(roleRepository.findByName(Role.ERole.MEMBER)
+                        .orElseThrow(() -> new RuntimeException("Error: Role MEMBER is not found.")));
+                    break;
+                // We intentionally do not have a default case.
+                // This makes the code safer by ignoring any invalid role strings.
+            }
+        }
+        
+        // As a final safety check, if no valid roles were found after looping,
+        // ensure the user still gets the default MEMBER role.
+        if (roles.isEmpty()){
+             roles.add(roleRepository.findByName(Role.ERole.MEMBER)
+                .orElseThrow(() -> new RuntimeException("Error: Default role MEMBER is not found.")));
+        }
+
         return roles;
     }
+    
 
-    // Helper to send WebSocket updates
     private void broadcastUserStats() {
         long totalUsers = userRepository.count();
         messagingTemplate.convertAndSend("/topic/dashboard/stats", Map.of("totalUsers", totalUsers));
