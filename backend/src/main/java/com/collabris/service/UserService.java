@@ -1,18 +1,21 @@
 package com.collabris.service;
 
 import com.collabris.dto.request.AdminUserUpdateRequest;
+import com.collabris.dto.response.JwtResponse;
 import com.collabris.dto.response.UserResponse;
 import com.collabris.entity.Role;
 import com.collabris.entity.User;
 import com.collabris.repository.RoleRepository;
 import com.collabris.repository.UserRepository;
+import com.collabris.security.jwt.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.HashSet;
 import java.util.List;
@@ -33,10 +36,29 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    @Autowired
+    private JwtUtils jwtUtils;
+
+    @Transactional(readOnly = true)
+    public JwtResponse generateJwtResponse(Authentication authentication) {
+        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+        String username = userDetails.getUsername();
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        
+        if (!user.isEnabled()) {
+            return null;
+        }
+
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        return new JwtResponse(jwt, user);
+    }
 
     public User saveUser(User user) {
         User savedUser = userRepository.save(user);
-        broadcastUserStats(); // Send WebSocket update
+        broadcastUserStats();
         return savedUser;
     }
 
@@ -100,18 +122,14 @@ public class UserService {
         userRepository.deleteById(userId);
         broadcastUserStats();
     }
-    // The logic here is now much cleaner, more explicit, and correct.
+    
     private Set<Role> getRolesFromStrings(Set<String> strRoles) {
         Set<Role> roles = new HashSet<>();
-
-        // If the incoming role set is null or empty, default to MEMBER.
         if (strRoles == null || strRoles.isEmpty()) {
             roles.add(roleRepository.findByName(Role.ERole.MEMBER)
                 .orElseThrow(() -> new RuntimeException("Error: Default role MEMBER is not found.")));
             return roles;
         }
-
-        // Iterate through the provided role strings from the request.
         for (String role : strRoles) {
             switch (role.toUpperCase()) {
                 case "ADMIN":
@@ -126,32 +144,17 @@ public class UserService {
                     roles.add(roleRepository.findByName(Role.ERole.MEMBER)
                         .orElseThrow(() -> new RuntimeException("Error: Role MEMBER is not found.")));
                     break;
-                // We intentionally do not have a default case.
-                // This makes the code safer by ignoring any invalid role strings.
             }
         }
-        
-        // As a final safety check, if no valid roles were found after looping,
-        // ensure the user still gets the default MEMBER role.
         if (roles.isEmpty()){
              roles.add(roleRepository.findByName(Role.ERole.MEMBER)
                 .orElseThrow(() -> new RuntimeException("Error: Default role MEMBER is not found.")));
         }
-
         return roles;
     }
-    
 
     private void broadcastUserStats() {
         long totalUsers = userRepository.count();
         messagingTemplate.convertAndSend("/topic/dashboard/stats", Map.of("totalUsers", totalUsers));
     }
-
-    public static User getPrincipal() {
-    Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-    if (principal instanceof User) {
-        return (User) principal;
-    }
-    return null; // Should not happen in a secured context
-}
 }
