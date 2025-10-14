@@ -1,4 +1,3 @@
-// File path: backend/src/main/java/com/collabris/entity/User.java
 package com.collabris.entity;
 
 import jakarta.persistence.*;
@@ -41,6 +40,9 @@ public class User {
 
     @ManyToMany(mappedBy = "members", fetch = FetchType.LAZY)
     private Set<Team> teams = new HashSet<>();
+
+    @OneToMany(mappedBy = "assignee", fetch = FetchType.LAZY)
+    private Set<Task> assignedTasks = new HashSet<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -89,4 +91,6 @@ public class User {
     public void setProjects(Set<Project> projects) { this.projects = projects; }
     public Set<Team> getTeams() { return teams; }
     public void setTeams(Set<Team> teams) { this.teams = teams; }
+    public Set<Task> getAssignedTasks() { return assignedTasks; }
+    public void setAssignedTasks(Set<Task> assignedTasks) { this.assignedTasks = assignedTasks; }
 }
