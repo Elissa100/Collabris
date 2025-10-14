@@ -4,7 +4,8 @@ import authReducer from './slices/authSlice';
 import themeReducer from './slices/themeSlice';
 import uiReducer from './slices/uiSlice';
 import userReducer from './slices/userSlice';
-import chatReducer from './slices/chatSlice'; // 1. Import the new reducer
+import chatReducer from './slices/chatSlice';
+import taskReducer from './slices/taskSlice'; 
 
 export const store = configureStore({
   reducer: {
@@ -12,7 +13,8 @@ export const store = configureStore({
     theme: themeReducer,
     ui: uiReducer,
     user: userReducer,
-    chat: chatReducer, // 2. Add the chat reducer to the store
+    chat: chatReducer,
+    tasks: taskReducer, // 2. Add the task reducer
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
