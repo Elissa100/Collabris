@@ -38,7 +38,7 @@ public class TaskController {
      * Only members of the project can create tasks.
      */
     @PostMapping("/projects/{projectId}/tasks")
-    @PreAuthorize("isAuthenticated() and @projectRepository.findById(#projectId).get().getMembers().contains(T(com.collabris.service.UserService).getPrincipal())")
+    @PreAuthorize("isAuthenticated() and @securityUtils.isProjectMember(#projectId)")
     public ResponseEntity<TaskResponse> createTask(@PathVariable Long projectId,
                                                    @Valid @RequestBody TaskRequest taskRequest,
                                                    @AuthenticationPrincipal UserDetails userDetails) {
@@ -51,7 +51,7 @@ public class TaskController {
      * Only members of the project can view tasks.
      */
     @GetMapping("/projects/{projectId}/tasks")
-    @PreAuthorize("isAuthenticated() and @projectRepository.findById(#projectId).get().getMembers().contains(T(com.collabris.service.UserService).getPrincipal())")
+    @PreAuthorize("isAuthenticated() and @securityUtils.isProjectMember(#projectId)")
     public ResponseEntity<List<TaskResponse>> getTasksForProject(@PathVariable Long projectId) {
         return ResponseEntity.ok(taskService.getTasksForProject(projectId));
     }
