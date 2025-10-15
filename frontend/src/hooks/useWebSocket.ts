@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Client, IMessage, StompSubscription } from "@stomp/stompjs";
 import { useAppSelector } from "../store/store";
-import { selectToken } from "../store/slices/authSlice"; 
+import { selectToken } from "../store/slices/authSlice";
 
 const useWebSocket = (url: string) => {
   const clientRef = useRef<Client | null>(null);
   const [connected, setConnected] = useState(false);
-  const token = useAppSelector(selectToken); // Get the auth token from Redux
+  const token = useAppSelector(selectToken);
 
   const subscribe = useCallback((destination: string, callback: (msg: IMessage) => void): StompSubscription | null => {
     if (clientRef.current?.connected) {
@@ -26,31 +26,46 @@ const useWebSocket = (url: string) => {
   };
 
   useEffect(() => {
-    // Don't try to connect if there's no token
+    // --- THIS IS THE CRITICAL FIX ---
+    // If there's no token, do not attempt to connect.
     if (!token) {
-        console.log("[WebSocket] No auth token found. Connection delayed.");
+        console.log("[WebSocket] No token found. Connection attempt deferred.");
+        // If there's an existing, old client, deactivate it.
+        if (clientRef.current) {
+            clientRef.current.deactivate();
+            clientRef.current = null;
+            setConnected(false);
+        }
+        return; // Stop here.
+    }
+    // --- END OF FIX ---
+
+    // If there's already an active client, don't create a new one.
+    if (clientRef.current) {
         return;
     }
 
     const stompClient = new Client({
+      // We will now connect directly, bypassing the Vite proxy for more stability.
       brokerURL: url.replace("http", "ws"),
       connectHeaders: {
         Authorization: `Bearer ${token}`,
       },
       reconnectDelay: 5000,
       onConnect: () => {
-        console.log("[WebSocket] ✅ Connected");
+        console.log("[WebSocket] ✅ Connected successfully.");
         setConnected(true);
       },
       onDisconnect: () => {
-        console.log("[WebSocket] ❌ Disconnected");
+        console.log("[WebSocket] ❌ Disconnected.");
         setConnected(false);
       },
       onStompError: (frame) => {
-        console.error("[WebSocket] STOMP error:", frame.headers["message"], frame.body);
+        console.error("[WebSocket] Broker reported error:", frame.headers['message']);
+        console.error("Additional details:", frame.body);
       },
-      onWebSocketClose: () => {
-        console.log("[WebSocket] 🔌 Connection closed");
+      onWebSocketClose: (event) => {
+        console.log("[WebSocket] 🔌 Connection closed.", event);
         setConnected(false);
       },
     });
@@ -60,10 +75,12 @@ const useWebSocket = (url: string) => {
 
     return () => {
       console.log("🧹 Cleaning up WebSocket connection...");
-      clientRef.current?.deactivate();
+      if (clientRef.current?.active) {
+          clientRef.current.deactivate();
+      }
       clientRef.current = null;
     };
-  }, [url, token]);
+  }, [url, token]); // The hook now correctly re-evaluates when the token becomes available.
 
   return { connected, sendMessage, subscribe };
 };
