@@ -23,10 +23,13 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- THIS DEPENDENCY IS THE PROBLEM AND HAS BEEN REMOVED -->
+        <!--
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-tomcat</artifactId>
         </dependency>
+        -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
