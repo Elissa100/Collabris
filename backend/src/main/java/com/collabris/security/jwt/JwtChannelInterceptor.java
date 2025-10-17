@@ -11,7 +11,6 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import java.util.List;
@@ -31,34 +30,49 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
+        // Only process the initial CONNECT command
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-            List<String> authorizationHeaders = accessor.getNativeHeader("Authorization");
-            logger.debug("Received WebSocket Authorization header: {}", authorizationHeaders);
+            logger.info("New WebSocket CONNECT command received.");
 
+            List<String> authorizationHeaders = accessor.getNativeHeader("Authorization");
             String jwt = null;
+
             if (authorizationHeaders != null && !authorizationHeaders.isEmpty()) {
                 String authHeader = authorizationHeaders.get(0);
+                logger.debug("Authorization header found: {}", authHeader);
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     jwt = authHeader.substring(7);
+                    logger.debug("Extracted JWT from header.");
                 }
+            } else {
+                logger.warn("No 'Authorization' header found in WebSocket CONNECT frame.");
             }
 
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
-                String username = jwtUtils.getUserNameFromJwtToken(jwt);
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+            try {
+                if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
+                    String username = jwtUtils.getUserNameFromJwtToken(jwt);
+                    logger.info("JWT is valid for user: {}", username);
 
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
-                
-                accessor.setUser(authentication);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                    
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    
+                    // This is the crucial part for STOMP security context
+                    accessor.setUser(authentication);
+                    logger.info("Successfully authenticated WebSocket session for user: {}", username);
 
-                logger.info("Successfully authenticated WebSocket user: {}", username);
-            } else {
-                logger.warn("WebSocket connection attempt without a valid JWT was blocked.");
+                } else {
+                    // This will now be logged if the token is null or invalid
+                    logger.error("WebSocket connection denied: JWT is missing, invalid, or expired.");
+                    // Returning null would be another way to reject, but letting it pass
+                    // to be rejected by the next layer of security is also fine.
+                }
+            } catch (Exception e) {
+                // This is the most important addition. We now catch ANY unexpected error.
+                logger.error("CRITICAL ERROR during WebSocket authentication: {}", e.getMessage(), e);
             }
         }
         return message;
     }
 }
-
