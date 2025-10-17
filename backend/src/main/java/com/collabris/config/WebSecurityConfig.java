@@ -3,7 +3,6 @@ package com.collabris.config;
 import com.collabris.security.jwt.AuthEntryPointJwt;
 import com.collabris.security.jwt.AuthTokenFilter;
 import com.collabris.security.services.UserDetailsServiceImpl;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -71,18 +70,31 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // Apply CORS configuration first.
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
-        http.csrf(csrf -> csrf.disable())
-                .exceptionHandling(e -> e.authenticationEntryPoint(unauthorizedHandler))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // THIS IS THE FINAL, CORRECT CONFIGURATION
-                        .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**").permitAll()
-                        .anyRequest().authenticated()
-                );
+        // Disable CSRF as we use JWT.
+        http.csrf(csrf -> csrf.disable());
 
+        // Set up exception handling for unauthorized requests.
+        http.exceptionHandling(e -> e.authenticationEntryPoint(unauthorizedHandler));
+
+        // Configure session management to be stateless.
+        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+        // Define authorization rules for HTTP requests.
+        http.authorizeHttpRequests(auth -> auth
+                // Explicitly permit all requests to these paths.
+                // This is the critical rule that allows the SockJS handshake.
+                .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**").permitAll()
+                // Any other request must be authenticated.
+                .anyRequest().authenticated()
+        );
+
+        // Set the custom authentication provider.
         http.authenticationProvider(authenticationProvider());
+        
+        // Add the JWT filter before the standard username/password filter.
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
