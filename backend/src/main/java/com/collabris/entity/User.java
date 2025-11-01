@@ -63,8 +63,6 @@ public class User {
 
     @PreUpdate
     protected void onUpdate() { this.updatedAt = LocalDateTime.now(); }
-
-    // --- Getters and Setters (no changes here) ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getUsername() { return username; }

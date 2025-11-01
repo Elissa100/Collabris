@@ -7,14 +7,12 @@ import org.springframework.security.config.annotation.web.messaging.MessageSecur
 import org.springframework.security.config.annotation.web.socket.AbstractSecurityWebSocketMessageBrokerConfigurer;
 
 @Configuration
-@Configuration
 // THIS IS THE FIX: This annotation is deprecated but is REQUIRED for this specific
 // interaction between WebSocket security and @PreAuthorize to work correctly in this version of Spring.
-@EnableGlobalMethodSecurity(prePostEnabled = true) 
+@EnableGlobalMethodSecurity(prePostEnabled = true)
 public class WebSocketSecurityConfig extends AbstractSecurityWebSocketMessageBrokerConfigurer {
 
     @Override
-    
     protected void configureInbound(MessageSecurityMetadataSourceRegistry messages) {
         messages
             // Allow anyone to connect. The authentication happens in our JwtChannelInterceptor.
@@ -33,9 +31,5 @@ public class WebSocketSecurityConfig extends AbstractSecurityWebSocketMessageBro
     protected boolean sameOriginDisabled() {
         // We disable CSRF for STOMP, as we are using JWT for authentication.
         return true;
-    
     }
-
 }
-
-

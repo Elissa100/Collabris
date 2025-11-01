@@ -2,6 +2,7 @@ package com.collabris.service;
 
 import com.collabris.dto.request.TaskRequest;
 import com.collabris.dto.response.TaskResponse;
+import com.collabris.entity.NotificationType;
 import com.collabris.entity.Project;
 import com.collabris.entity.Task;
 import com.collabris.entity.User;
@@ -28,6 +29,10 @@ public class TaskService {
     @Autowired
     private UserRepository userRepository;
 
+    // --- NEW DEPENDENCY ---
+    @Autowired
+    private NotificationService notificationService;
+
     /**
      * Creates a new task within a given project.
      * @param request The DTO containing task details.
@@ -49,6 +54,11 @@ public class TaskService {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new NoSuchElementException("Assignee user not found with ID: " + request.getAssigneeId()));
             task.setAssignee(assignee);
+
+            // --- NOTIFICATION LOGIC ---
+            String message = String.format("%s assigned you a new task: '%s' in project '%s'",
+                    creator.getUsername(), task.getTitle(), project.getName());
+            notificationService.createAndSendNotification(creator, assignee, NotificationType.TASK_ASSIGNED, message, "task", task.getId());
         }
 
         if (request.getStatus() != null) {
@@ -105,6 +115,8 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
 
+        User oldAssignee = task.getAssignee();
+
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
 
@@ -116,9 +128,18 @@ public class TaskService {
         }
 
         if (request.getAssigneeId() != null) {
-            User assignee = userRepository.findById(request.getAssigneeId())
+            User newAssignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new NoSuchElementException("Assignee user not found with ID: " + request.getAssigneeId()));
-            task.setAssignee(assignee);
+            task.setAssignee(newAssignee);
+            
+            // --- NOTIFICATION LOGIC ON RE-ASSIGNMENT ---
+            if (oldAssignee == null || !oldAssignee.getId().equals(newAssignee.getId())) {
+                 String message = String.format("A task was assigned to you: '%s' in project '%s'",
+                    task.getTitle(), task.getProject().getName());
+                // Here we can assume the system (or the updater) is the source. For now, let's pass null.
+                notificationService.createAndSendNotification(null, newAssignee, NotificationType.TASK_ASSIGNED, message, "task", task.getId());
+            }
+
         } else {
             task.setAssignee(null);
         }
