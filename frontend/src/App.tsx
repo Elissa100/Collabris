@@ -1,13 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import { ThemeProvider, Box } from '@mui/material';
 import CssBaseline from '@mui/material/CssBaseline';
 import { store, useAppDispatch, useAppSelector } from './store/store';
 import { useTheme } from './hooks/useTheme';
 
-import { getCurrentUser, selectInitialLoad, selectIsAuthenticated } from './store/slices/authSlice';
+import { getCurrentUser, selectInitialLoad, selectIsAuthenticated, selectUser } from './store/slices/authSlice';
+import { addNotification } from './store/slices/notificationSlice'; // <-- 1. IMPORT ACTION
+import useWebSocket from './hooks/useWebSocket'; // <-- 2. IMPORT HOOK
 
 // Pages
 import Landing from './pages/Landing/Landing';
@@ -32,6 +34,47 @@ const InitialLoadingScreen = () => (
     </Box>
 );
 
+// --- 3. CREATE A DEDICATED WEBSOCKET MANAGER ---
+const WebSocketManager = () => {
+    const dispatch = useAppDispatch();
+    const user = useAppSelector(selectUser);
+    const { subscribe } = useWebSocket("http://localhost:8080/ws");
+
+    // This callback will handle incoming notifications
+    const handleIncomingNotification = useCallback((msg: any) => {
+        try {
+            const notification = JSON.parse(msg.body);
+            // Dispatch to Redux to update the state
+            dispatch(addNotification(notification));
+            // Show a toast message to the user
+            toast.success(notification.message, {
+                icon: '🔔',
+            });
+        } catch (error) {
+            console.error("Could not parse incoming notification:", error);
+        }
+    }, [dispatch]);
+    
+    useEffect(() => {
+        let subscription: any = null;
+        if (user) {
+            // Subscribe to the user-specific channel
+            const destination = `/user/${user.username}/queue/notifications`;
+            subscription = subscribe(destination, handleIncomingNotification);
+        }
+
+        // Cleanup on component unmount or user change
+        return () => {
+            if (subscription) {
+                subscription.unsubscribe();
+            }
+        };
+    }, [user, subscribe, handleIncomingNotification]);
+
+    return null; // This component does not render anything
+};
+
+
 const AppContent = () => {
     const dispatch = useAppDispatch();
     const initialLoad = useAppSelector(selectInitialLoad);
@@ -39,24 +82,21 @@ const AppContent = () => {
     const [theme] = useTheme();
 
     useEffect(() => {
-        // Run this check only once when the app boots up
         if (store.getState().auth.initialLoad === 'idle') {
             dispatch(getCurrentUser());
         }
     }, [dispatch]);
     
-    // --- THIS IS THE CRITICAL LOGIC ---
-    // Show the loading screen ONLY if the initial check has not completed yet.
     if (initialLoad === 'idle' || initialLoad === 'loading') {
         return <InitialLoadingScreen />;
     }
     
-    // If the check is 'succeeded' or 'failed', we know the user's auth status and can render.
     return (
         <ThemeProvider theme={theme}>
             <CssBaseline />
             <Toaster position="bottom-right" reverseOrder={false} />
             <Router>
+                {isAuthenticated && <WebSocketManager />} {/* <-- 4. RENDER THE MANAGER */}
                 <Routes>
                     <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
