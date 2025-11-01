@@ -1,5 +1,3 @@
-// File path: frontend/src/types/index.ts
-
 // --- USER & AUTH TYPES ---
 export interface User {
   id: number;
@@ -8,7 +6,7 @@ export interface User {
   firstName: string;
   lastName: string;
   enabled: boolean;
-  roles: string[]; 
+  roles: string[];
   profilePicture?: string;
   createdAt: string;
   updatedAt?: string;
@@ -50,7 +48,6 @@ export interface ProjectRequest {
   description?: string;
 }
 
-// THIS IS THE MISSING PIECE
 export interface Team {
     id: number;
     name: string;
@@ -64,7 +61,25 @@ export interface TeamRequest {
   name: string;
   description?: string;
 }
-// END OF MISSING PIECE
+
+// --- NOTIFICATION TYPES (NEW) ---
+export enum NotificationType {
+    TASK_ASSIGNED = "TASK_ASSIGNED",
+    USER_MENTION = "USER_MENTION",
+    PROJECT_UPDATE = "PROJECT_UPDATE",
+    TEAM_INVITE = "TEAM_INVITE"
+}
+
+export interface Notification {
+    id: number;
+    type: NotificationType;
+    message: string;
+    isRead: boolean;
+    entityType?: string;
+    entityId?: number;
+    sourceUser?: User;
+    createdAt: string; // ISO datetime string
+}
 
 
 // --- ALL OTHER TYPES BELOW THIS LINE ARE FOR FUTURE USE ---
@@ -213,14 +228,8 @@ export interface FileUpload {
 }
 
 // Notification types
-export interface Notification {
-  id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
-  title: string;
-  message: string;
-  duration?: number;
-  actions?: NotificationAction[];
-}
+// --- NOTE: This is a duplicate and can be removed ---
+// The Notification interface is already defined above.
 
 export interface NotificationAction {
   label: string;
