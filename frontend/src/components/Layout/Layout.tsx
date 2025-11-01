@@ -8,7 +8,7 @@ import {
   IconButton,
   Drawer,
   List,
-  ListItemButton, // Use ListItemButton for better click handling
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   Box,
@@ -16,7 +16,7 @@ import {
   Menu,
   MenuItem,
   Divider,
-  CircularProgress, // Use a proper loading component
+  CircularProgress,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -27,10 +27,10 @@ import {
 } from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout, selectUser } from '../../store/slices/authSlice';
+import NotificationBell from '../Notifications/NotificationBell'; // <-- 1. IMPORT THE COMPONENT
 
 const drawerWidth = 240;
 
-// Define the type for the component's props
 interface LayoutProps {
   children: ReactNode;
 }
@@ -41,14 +41,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const user = useSelector(selectUser);
   const [mobileOpen, setMobileOpen] = useState(false);
   
-  // Define the type for anchorEl state
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  // Define the type for the menu event
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -59,7 +57,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const handleLogout = () => {
     dispatch(logout());
-    // Use replace: true to prevent user from going back to a protected page
     navigate('/login', { replace: true });
     handleClose();
   };
@@ -71,8 +68,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
   
-  // Bulletproof safety check. If the user is somehow not available,
-  // show a full-screen loader to prevent any rendering crashes.
   if (!user) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -113,10 +108,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Collabris
           </Typography>
-          <div>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <NotificationBell /> {/* <-- 2. ADD THE BELL HERE */}
             <IconButton onClick={handleMenu} color="inherit">
               <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                {/* Safety check to prevent crash if username is missing */}
                 {user.username ? user.username.charAt(0).toUpperCase() : '?'}
               </Avatar>
             </IconButton>
@@ -131,7 +126,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <MenuItem component={Link} to="/profile" onClick={handleClose}>Profile</MenuItem>
               <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </Menu>
-          </div>
+          </Box>
         </Toolbar>
       </AppBar>
       <Box
