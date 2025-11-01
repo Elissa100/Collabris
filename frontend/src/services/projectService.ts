@@ -2,14 +2,11 @@
 import apiClient from './apiClient';
 import { Project, ProjectRequest } from '../types';
 
-// This is the new function to fetch the user's projects
 export const getMyProjects = async (): Promise<Project[]> => {
-    // This calls the GET /api/projects endpoint we secured in the last step
     const response = await apiClient.get('/api/projects');
     return response;
 };
 
-// These functions will be used when we build the project creation/editing modals
 export const createProject = async (projectData: ProjectRequest): Promise<Project> => {
     const response = await apiClient.post('/api/projects', projectData);
     return response;
@@ -21,11 +18,35 @@ export const updateProject = async (projectId: number, projectData: ProjectReque
 };
 
 export const deleteProject = async (projectId: number): Promise<void> => {
-    const response = await apiClient.delete(`/api/projects/${projectId}`);
+    await apiClient.delete(`/api/projects/${projectId}`);
+};
+
+export const getProjectById = async (projectId: number | string): Promise<Project> => {
+    const response = await apiClient.get(`/api/projects/${projectId}`);
     return response;
 };
 
-export const getProjectById = async (projectId: number): Promise<Project> => {
-    const response = await apiClient.get(`/api/projects/${projectId}`);
+// --- NEWLY ADDED FUNCTIONS ---
+
+/**
+ * Adds a user to a specific project.
+ * Corresponds to: POST /api/projects/{projectId}/members/{userId}
+ * @param projectId The ID of the project.
+ * @param userId The ID of the user to add.
+ */
+export const addMemberToProject = async (projectId: number | string, userId: number): Promise<Project> => {
+    // The second argument to post is the request body, which is null in this case.
+    const response = await apiClient.post(`/api/projects/${projectId}/members/${userId}`, null);
+    return response;
+};
+
+/**
+ * Removes a user from a specific project.
+ * Corresponds to: DELETE /api/projects/{projectId}/members/{userId}
+ * @param projectId The ID of the project.
+ * @param userId The ID of the user to remove.
+ */
+export const removeMemberFromProject = async (projectId: number | string, userId: number): Promise<Project> => {
+    const response = await apiClient.delete(`/api/projects/${projectId}/members/${userId}`);
     return response;
 };
