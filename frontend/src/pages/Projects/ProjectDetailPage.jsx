@@ -15,20 +15,20 @@ import {
 import { fetchTasksForProject, createNewTask, updateExistingTask, selectTasksForProject, selectTasksLoadingStatus } from "../../store/slices/taskSlice";
 
 // --- Service, Hook, and Component Imports ---
-import { getProjectById } from "../../services/projectService";
+import { getProjectById, addMemberToProject, removeMemberFromProject } from "../../services/projectService"; // <-- IMPORT NEW SERVICES
 import useWebSocket from "../../hooks/useWebSocket";
 import Layout from "../../components/Layout/Layout";
 import KanbanBoard from "./KanbanBoard";
 import TaskModal from "./TaskModal";
+import ProjectMembersManager from "./ProjectMembersManager"; // <-- IMPORT THE NEW COMPONENT
 
-// --- ChatView Component ---
+// --- ChatView Component (UNMODIFIED) ---
 const ChatView = ({ projectId }) => {
-    const dispatch = useAppDispatch(); // Corrected typo
+    const dispatch = useAppDispatch();
     const currentUser = useAppSelector(selectUser);
     const messages = useAppSelector(selectMessagesForProject(projectId));
     const [input, setInput] = useState("");
     const messagesEndRef = useRef(null);
-    // The hook now connects directly to the backend, bypassing the Vite proxy
     const { connected, sendMessage, subscribe } = useWebSocket("http://localhost:8080/ws");
 
     const handleIncomingMessage = useCallback((msg) => {
@@ -90,7 +90,7 @@ const ChatView = ({ projectId }) => {
     );
 };
 
-// --- Main Page Component ---
+// --- Main Page Component (MODIFIED) ---
 const ProjectDetailPage = () => {
     const { projectId } = useParams();
     const dispatch = useAppDispatch();
@@ -101,16 +101,26 @@ const ProjectDetailPage = () => {
 
     const tasks = useAppSelector(selectTasksForProject(projectId));
     const tasksLoading = useAppSelector(selectTasksLoadingStatus) === 'loading';
+    
+    // --- NEW: Function to refresh project data ---
+    const fetchProjectData = useCallback(async () => {
+        if (projectId) {
+            try {
+                const projectData = await getProjectById(projectId);
+                setProject(projectData);
+            } catch (error) {
+                toast.error("Failed to load project details.");
+            }
+        }
+    }, [projectId]);
 
     useEffect(() => {
         if (projectId) {
             dispatch(fetchMessagesForProject(projectId));
             dispatch(fetchTasksForProject(projectId));
-            getProjectById(projectId)
-                .then(setProject)
-                .catch(() => toast.error("Failed to load project details."));
+            fetchProjectData();
         }
-    }, [projectId, dispatch]);
+    }, [projectId, dispatch, fetchProjectData]);
 
     const handleTabChange = (event, newValue) => setActiveTab(newValue);
 
@@ -125,17 +135,15 @@ const ProjectDetailPage = () => {
     };
 
     const handleSaveTask = (taskData, taskId) => {
-        if (taskId) {
-            dispatch(updateExistingTask({ taskId, taskData, projectId }))
-                .unwrap()
-                .then(() => toast.success("Task updated!"))
-                .catch((err) => toast.error(`Failed to update task: ${err.message}`));
-        } else {
-            dispatch(createNewTask({ projectId, taskData }))
-                .unwrap()
-                .then(() => toast.success("Task created!"))
-                .catch((err) => toast.error(`Failed to create task: ${err.message}`));
-        }
+        const action = taskId
+            ? updateExistingTask({ taskId, taskData, projectId })
+            : createNewTask({ projectId, taskData });
+
+        dispatch(action)
+            .unwrap()
+            .then(() => toast.success(`Task ${taskId ? 'updated' : 'created'}!`))
+            .catch((err) => toast.error(`Failed to save task: ${err.message}`));
+        
         handleCloseTaskModal();
     };
 
@@ -144,6 +152,17 @@ const ProjectDetailPage = () => {
             .unwrap()
             .then(() => toast.success(`Task status updated!`))
             .catch((err) => toast.error(`Failed to update task: ${err.message}`));
+    };
+
+    // --- NEW: Handlers for adding/removing members ---
+    const handleAddMember = async (userId) => {
+        await addMemberToProject(projectId, userId);
+        await fetchProjectData(); // Refresh data to show the new member
+    };
+
+    const handleRemoveMember = async (userId) => {
+        await removeMemberFromProject(projectId, userId);
+        await fetchProjectData(); // Refresh data to show the updated list
     };
 
     if (!project) {
@@ -162,6 +181,7 @@ const ProjectDetailPage = () => {
                     <Tabs value={activeTab} onChange={handleTabChange}>
                         <Tab label="Tasks" />
                         <Tab label="Chat" />
+                        <Tab label="Members" /> {/* <-- NEW TAB */}
                     </Tabs>
                     {activeTab === 0 && (
                          <Button startIcon={<AddIcon />} onClick={() => handleOpenTaskModal(null)} sx={{ mr: 1 }}>
@@ -179,6 +199,13 @@ const ProjectDetailPage = () => {
                         />
                     )}
                     {activeTab === 1 && <ChatView projectId={projectId} />}
+                    {activeTab === 2 && ( /* <-- NEW VIEW */
+                        <ProjectMembersManager 
+                            project={project}
+                            onAddMember={handleAddMember}
+                            onRemoveMember={handleRemoveMember}
+                        />
+                    )}
                 </Box>
             </Paper>
 
