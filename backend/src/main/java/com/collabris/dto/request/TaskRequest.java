@@ -4,6 +4,7 @@ import com.collabris.entity.Task;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
+import java.util.Set;
 
 public class TaskRequest {
 
@@ -17,7 +18,9 @@ public class TaskRequest {
 
     private LocalDate dueDate;
 
-    private Long assigneeId; // ID of the user to assign the task to
+    private Long assigneeId;
+
+    private Set<Long> attachmentIds; // A set of IDs from FileMetadata
 
     // Getters and Setters
     public String getTitle() { return title; }
@@ -30,4 +33,6 @@ public class TaskRequest {
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
     public Long getAssigneeId() { return assigneeId; }
     public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
+    public Set<Long> getAttachmentIds() { return attachmentIds; }
+    public void setAttachmentIds(Set<Long> attachmentIds) { this.attachmentIds = attachmentIds; }
 }

@@ -1,5 +1,3 @@
-// File path: frontend/src/types/index.ts
-
 // --- USER & AUTH TYPES ---
 export interface User {
   id: number;
@@ -83,7 +81,7 @@ export interface Notification {
     createdAt: string; // ISO datetime string
 }
 
-// --- ACTIVITY LOG TYPES (NEW) ---
+// --- ACTIVITY LOG TYPES ---
 export interface ActivityLog {
     id: number;
     actor: User;
@@ -94,19 +92,38 @@ export interface ActivityLog {
     timestamp: string; // ISO datetime string
 }
 
+// --- FILE METADATA TYPE (NEW) ---
+export interface FileMetadata {
+    id: number;
+    fileName: string;
+    fileDownloadUri: string;
+    fileType: string;
+    size: number;
+}
 
-// --- ALL OTHER TYPES BELOW THIS LINE ARE FOR FUTURE USE ---
+// --- TASK & CHAT TYPES ---
 
-// Chat types
-export interface ChatRoom {
+export interface Task {
   id: number;
-  name: string;
+  title: string;
   description?: string;
-  type: 'DIRECT' | 'GROUP' | 'TEAM' | 'PROJECT';
+  status: 'TO_DO' | 'IN_PROGRESS' | 'DONE';
+  dueDate?: string;
+  projectId: number;
+  assignee?: User;
+  creator: User;
+  attachments: FileMetadata[]; // <-- ADDED
   createdAt: string;
   updatedAt: string;
-  members: User[];
-  lastMessage?: ChatMessage;
+}
+
+export interface TaskRequest {
+  title: string;
+  description?: string;
+  status?: 'TO_DO' | 'IN_PROGRESS' | 'DONE';
+  dueDate?: string;
+  assigneeId?: number | null;
+  attachmentIds?: number[]; // <-- ADDED
 }
 
 export interface ChatMessage {
@@ -120,32 +137,22 @@ export interface ChatMessage {
   editedAt?: string;
 }
 
+// --- OTHER TYPES ---
+export interface ChatRoom {
+  id: number;
+  name: string;
+  description?: string;
+  type: 'DIRECT' | 'GROUP' | 'TEAM' | 'PROJECT';
+  createdAt: string;
+  updatedAt: string;
+  members: User[];
+  lastMessage?: ChatMessage;
+}
 
 export interface ChatMessageRequest {
   content: string;
   messageType: ChatMessage['messageType'];
   chatRoomId: number;
-}
-
-export interface Task {
-  id: number;
-  title: string;
-  description?: string;
-  status: 'TO_DO' | 'IN_PROGRESS' | 'DONE';
-  dueDate?: string; // Will be an ISO date string like "2025-12-31"
-  projectId: number;
-  assignee?: User; // Assignee can be null
-  creator: User;
-  createdAt: string; // ISO datetime string
-  updatedAt: string; // ISO datetime string
-}
-
-export interface TaskRequest {
-  title: string;
-  description?: string;
-  status?: 'TO_DO' | 'IN_PROGRESS' | 'DONE';
-  dueDate?: string;
-  assigneeId?: number | null;
 }
 
 export interface ChatRoomRequest {
@@ -155,7 +162,6 @@ export interface ChatRoomRequest {
   memberIds: number[];
 }
 
-// UI State types
 export interface LoadingState {
   [key: string]: boolean;
 }
@@ -164,10 +170,8 @@ export interface ErrorState {
   [key: string]: string | null;
 }
 
-// Theme types
 export type ThemeMode = 'light' | 'dark' | 'system';
 
-// API Response types
 export interface ApiResponse<T = any> {
   data: T;
   message?: string;
@@ -178,14 +182,6 @@ export interface ApiError {
   message: string;
   status: number;
   details?: any;
-}
-
-// Pagination types
-export interface PaginationParams {
-  page?: number;
-  size?: number;
-  sort?: string;
-  direction?: 'ASC' | 'DESC';
 }
 
 export interface PaginatedResponse<T> {
@@ -199,22 +195,10 @@ export interface PaginatedResponse<T> {
   numberOfElements: number;
 }
 
-// Dashboard types
 export interface DashboardStats {
   totalUsers?: number;
   totalTeams?: number;
   totalProjects?: number;
-  activeProjects?: number;
-  completedProjects?: number;
-  totalMessages?: number;
-  userGrowth?: number;
-  projectProgress?: {
-    completed: number;
-    inProgress: number;
-    planning: number;
-    onHold: number;
-  };
-  recentActivities?: DashboardActivity[];
 }
 
 export interface DashboardActivity {
@@ -227,12 +211,10 @@ export interface DashboardActivity {
   timestamp: string;
 }
 
-// Form types
 export interface FormErrors {
   [key: string]: string | undefined;
 }
 
-// File upload types
 export interface FileUpload {
   file: File;
   progress: number;
@@ -246,7 +228,6 @@ export interface NotificationAction {
   variant?: 'text' | 'outlined' | 'contained';
 }
 
-// WebSocket types
 export interface WebSocketMessage {
   type: string;
   payload: any;

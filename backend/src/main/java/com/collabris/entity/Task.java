@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "tasks")
@@ -26,20 +28,26 @@ public class Task {
 
     private LocalDate dueDate;
 
-    // The project this task belongs to (Many tasks to one project)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    // The user this task is assigned to (Many tasks can be assigned to one user)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assignee_id") // Nullable because a task can be unassigned
+    @JoinColumn(name = "assignee_id")
     private User assignee;
 
-    // The user who created this task
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "creator_id", nullable = false)
     private User creator;
+
+    // --- NEW RELATIONSHIP ---
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "task_attachments",
+            joinColumns = @JoinColumn(name = "task_id"),
+            inverseJoinColumns = @JoinColumn(name = "file_metadata_id")
+    )
+    private Set<FileMetadata> attachments = new HashSet<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -47,7 +55,6 @@ public class Task {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Enum for the task status, defining the columns of our future Kanban board
     public enum Status {
         TO_DO,
         IN_PROGRESS,
@@ -86,4 +93,6 @@ public class Task {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Set<FileMetadata> getAttachments() { return attachments; }
+    public void setAttachments(Set<FileMetadata> attachments) { this.attachments = attachments; }
 }

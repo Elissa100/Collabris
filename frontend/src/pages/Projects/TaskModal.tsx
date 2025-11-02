@@ -1,9 +1,11 @@
-import React, { useEffect } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Grid, MenuItem } from '@mui/material';
+import React, { useEffect, useState } from 'react';
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Grid, MenuItem, Box, Typography, List, ListItem, ListItemText, IconButton, Chip, ListItemIcon } from '@mui/material';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { Task, User } from '../../types';
+import { Task, User, FileMetadata } from '../../types';
+import FileUpload from '../../components/Common/FileUpload';
+import { Attachment as AttachmentIcon, Close as CloseIcon } from '@mui/icons-material';
 
 interface TaskModalProps {
   open: boolean;
@@ -25,6 +27,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onSave, task, proj
   });
   const isEditing = !!task;
 
+  // --- NEW: State to manage attachments ---
+  const [attachments, setAttachments] = useState<FileMetadata[]>([]);
+
   useEffect(() => {
     if (open) {
       reset({
@@ -32,11 +37,26 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onSave, task, proj
         description: task?.description || '',
         assigneeId: task?.assignee?.id || null,
       });
+      // Set initial attachments if editing a task
+      setAttachments(task?.attachments || []);
     }
   }, [task, open, reset]);
 
   const onSubmit = (data: any) => {
-    onSave(data, task?.id);
+    // Include the attachment IDs in the save payload
+    const finalData = {
+        ...data,
+        attachmentIds: attachments.map(att => att.id),
+    };
+    onSave(finalData, task?.id);
+  };
+
+  const handleUploadComplete = (metadata: FileMetadata) => {
+    setAttachments(prev => [...prev, metadata]);
+  };
+
+  const handleRemoveAttachment = (idToRemove: number) => {
+    setAttachments(prev => prev.filter(att => att.id !== idToRemove));
   };
 
   return (
@@ -65,6 +85,27 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onSave, task, proj
                 </TextField>
               )} />
             </Grid>
+
+            {/* --- NEW: Attachments Section --- */}
+            <Grid item xs={12}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Attachments</Typography>
+                <FileUpload onUploadComplete={handleUploadComplete} />
+                <List dense>
+                    {attachments.map(att => (
+                        <ListItem key={att.id}
+                            secondaryAction={
+                                <IconButton edge="end" onClick={() => handleRemoveAttachment(att.id)}>
+                                    <CloseIcon />
+                                </IconButton>
+                            }
+                        >
+                            <ListItemIcon><AttachmentIcon /></ListItemIcon>
+                            <ListItemText primary={att.fileName} secondary={`${(att.size / 1024).toFixed(1)} KB`} />
+                        </ListItem>
+                    ))}
+                </List>
+            </Grid>
+
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>
