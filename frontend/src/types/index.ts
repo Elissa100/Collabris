@@ -1,3 +1,5 @@
+// File path: frontend/src/types/index.ts
+
 // --- USER & AUTH TYPES ---
 export interface User {
   id: number;
@@ -62,7 +64,7 @@ export interface TeamRequest {
   description?: string;
 }
 
-// --- NOTIFICATION TYPES (NEW) ---
+// --- NOTIFICATION TYPES ---
 export enum NotificationType {
     TASK_ASSIGNED = "TASK_ASSIGNED",
     USER_MENTION = "USER_MENTION",
@@ -79,6 +81,17 @@ export interface Notification {
     entityId?: number;
     sourceUser?: User;
     createdAt: string; // ISO datetime string
+}
+
+// --- ACTIVITY LOG TYPES (NEW) ---
+export interface ActivityLog {
+    id: number;
+    actor: User;
+    action: string;
+    entityType: string;
+    entityId: number;
+    details: string;
+    timestamp: string; // ISO datetime string
 }
 
 
@@ -201,10 +214,10 @@ export interface DashboardStats {
     planning: number;
     onHold: number;
   };
-  recentActivities?: Activity[];
+  recentActivities?: DashboardActivity[];
 }
 
-export interface Activity {
+export interface DashboardActivity {
   id: number;
   type: 'USER_JOINED' | 'PROJECT_CREATED' | 'TEAM_CREATED' | 'MESSAGE_SENT' | 'PROJECT_COMPLETED';
   description: string;
@@ -226,10 +239,6 @@ export interface FileUpload {
   status: 'pending' | 'uploading' | 'completed' | 'error';
   url?: string;
 }
-
-// Notification types
-// --- NOTE: This is a duplicate and can be removed ---
-// The Notification interface is already defined above.
 
 export interface NotificationAction {
   label: string;
