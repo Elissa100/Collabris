@@ -3,7 +3,7 @@ import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, G
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { Task, User, FileMetadata } from '../../types';
+import { Task, User, FileMetadata, TaskPriority } from '../../types'; // <-- IMPORT TaskPriority
 import FileUpload from '../../components/Common/FileUpload';
 import { Attachment as AttachmentIcon, Close as CloseIcon } from '@mui/icons-material';
 
@@ -15,10 +15,13 @@ interface TaskModalProps {
   projectMembers: User[];
 }
 
+// Update schema to include optional dueDate
 const schema = yup.object().shape({
   title: yup.string().required('Title is required'),
   description: yup.string(),
   assigneeId: yup.number().nullable(),
+  priority: yup.string().oneOf(Object.values(TaskPriority)),
+  dueDate: yup.string().nullable(),
 });
 
 const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onSave, task, projectMembers }) => {
@@ -26,8 +29,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onSave, task, proj
     resolver: yupResolver(schema),
   });
   const isEditing = !!task;
-
-  // --- NEW: State to manage attachments ---
   const [attachments, setAttachments] = useState<FileMetadata[]>([]);
 
   useEffect(() => {
@@ -36,16 +37,18 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onSave, task, proj
         title: task?.title || '',
         description: task?.description || '',
         assigneeId: task?.assignee?.id || null,
+        priority: task?.priority || TaskPriority.MEDIUM, // <-- ADDED
+        dueDate: task?.dueDate || '', // <-- ADDED
       });
-      // Set initial attachments if editing a task
       setAttachments(task?.attachments || []);
     }
   }, [task, open, reset]);
 
   const onSubmit = (data: any) => {
-    // Include the attachment IDs in the save payload
+    // Filter out empty string for dueDate
     const finalData = {
         ...data,
+        dueDate: data.dueDate || null,
         attachmentIds: attachments.map(att => att.id),
     };
     onSave(finalData, task?.id);
@@ -75,6 +78,28 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onSave, task, proj
                 <TextField {...field} label="Description" fullWidth multiline rows={4} />
               )} />
             </Grid>
+            {/* --- NEW ROW FOR PRIORITY AND DUE DATE --- */}
+            <Grid item xs={12} sm={6}>
+              <Controller name="priority" control={control} render={({ field }) => (
+                <TextField {...field} select label="Priority" fullWidth>
+                  {Object.values(TaskPriority).map((p) => (
+                    <MenuItem key={p} value={p}>{p}</MenuItem>
+                  ))}
+                </TextField>
+              )} />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+                <Controller name="dueDate" control={control} render={({ field }) => (
+                    <TextField
+                        {...field}
+                        label="Due Date"
+                        type="date"
+                        fullWidth
+                        InputLabelProps={{ shrink: true }}
+                    />
+                )} />
+            </Grid>
+
             <Grid item xs={12}>
               <Controller name="assigneeId" control={control} render={({ field }) => (
                 <TextField {...field} select label="Assign To" fullWidth>
@@ -86,7 +111,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onSave, task, proj
               )} />
             </Grid>
 
-            {/* --- NEW: Attachments Section --- */}
             <Grid item xs={12}>
                 <Typography variant="subtitle2" sx={{ mb: 1 }}>Attachments</Typography>
                 <FileUpload onUploadComplete={handleUploadComplete} />
@@ -105,7 +129,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ open, onClose, onSave, task, proj
                     ))}
                 </List>
             </Grid>
-
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 3 }}>

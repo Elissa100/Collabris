@@ -92,7 +92,7 @@ export interface ActivityLog {
     timestamp: string; // ISO datetime string
 }
 
-// --- FILE METADATA TYPE (NEW) ---
+// --- FILE METADATA TYPE ---
 export interface FileMetadata {
     id: number;
     fileName: string;
@@ -103,16 +103,25 @@ export interface FileMetadata {
 
 // --- TASK & CHAT TYPES ---
 
+// NEW: TaskPriority Enum
+export enum TaskPriority {
+    LOW = "LOW",
+    MEDIUM = "MEDIUM",
+    HIGH = "HIGH",
+    URGENT = "URGENT",
+}
+
 export interface Task {
   id: number;
   title: string;
   description?: string;
   status: 'TO_DO' | 'IN_PROGRESS' | 'DONE';
+  priority: TaskPriority; // <-- UPDATED
   dueDate?: string;
   projectId: number;
   assignee?: User;
   creator: User;
-  attachments: FileMetadata[]; // <-- ADDED
+  attachments: FileMetadata[];
   createdAt: string;
   updatedAt: string;
 }
@@ -121,9 +130,10 @@ export interface TaskRequest {
   title: string;
   description?: string;
   status?: 'TO_DO' | 'IN_PROGRESS' | 'DONE';
+  priority?: TaskPriority; // <-- ADDED
   dueDate?: string;
   assigneeId?: number | null;
-  attachmentIds?: number[]; // <-- ADDED
+  attachmentIds?: number[];
 }
 
 export interface ChatMessage {

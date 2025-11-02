@@ -15,12 +15,12 @@ import {
 import { fetchTasksForProject, createNewTask, updateExistingTask, selectTasksForProject, selectTasksLoadingStatus } from "../../store/slices/taskSlice";
 
 // --- Service, Hook, and Component Imports ---
-import { getProjectById, addMemberToProject, removeMemberFromProject } from "../../services/projectService"; // <-- IMPORT NEW SERVICES
+import { getProjectById, addMemberToProject, removeMemberFromProject } from "../../services/projectService";
 import useWebSocket from "../../hooks/useWebSocket";
 import Layout from "../../components/Layout/Layout";
 import KanbanBoard from "./KanbanBoard";
 import TaskModal from "./TaskModal";
-import ProjectMembersManager from "./ProjectMembersManager"; // <-- IMPORT THE NEW COMPONENT
+import ProjectMembersManager from "./ProjectMembersManager";
 
 // --- ChatView Component (UNMODIFIED) ---
 const ChatView = ({ projectId }) => {
@@ -102,7 +102,6 @@ const ProjectDetailPage = () => {
     const tasks = useAppSelector(selectTasksForProject(projectId));
     const tasksLoading = useAppSelector(selectTasksLoadingStatus) === 'loading';
     
-    // --- NEW: Function to refresh project data ---
     const fetchProjectData = useCallback(async () => {
         if (projectId) {
             try {
@@ -124,6 +123,7 @@ const ProjectDetailPage = () => {
 
     const handleTabChange = (event, newValue) => setActiveTab(newValue);
 
+    // MODIFIED: This is now also used for opening the modal to EDIT a task
     const handleOpenTaskModal = (task = null) => {
         setEditingTask(task);
         setTaskModalOpen(true);
@@ -154,15 +154,14 @@ const ProjectDetailPage = () => {
             .catch((err) => toast.error(`Failed to update task: ${err.message}`));
     };
 
-    // --- NEW: Handlers for adding/removing members ---
     const handleAddMember = async (userId) => {
         await addMemberToProject(projectId, userId);
-        await fetchProjectData(); // Refresh data to show the new member
+        await fetchProjectData();
     };
 
     const handleRemoveMember = async (userId) => {
         await removeMemberFromProject(projectId, userId);
-        await fetchProjectData(); // Refresh data to show the updated list
+        await fetchProjectData();
     };
 
     if (!project) {
@@ -181,7 +180,7 @@ const ProjectDetailPage = () => {
                     <Tabs value={activeTab} onChange={handleTabChange}>
                         <Tab label="Tasks" />
                         <Tab label="Chat" />
-                        <Tab label="Members" /> {/* <-- NEW TAB */}
+                        <Tab label="Members" />
                     </Tabs>
                     {activeTab === 0 && (
                          <Button startIcon={<AddIcon />} onClick={() => handleOpenTaskModal(null)} sx={{ mr: 1 }}>
@@ -195,11 +194,12 @@ const ProjectDetailPage = () => {
                         <KanbanBoard 
                             tasks={tasks} 
                             projectMembers={project.members} 
-                            onTaskUpdate={handleTaskUpdate} 
+                            onTaskUpdate={handleTaskUpdate}
+                            onTaskClick={handleOpenTaskModal} // <-- PASS THE HANDLER
                         />
                     )}
                     {activeTab === 1 && <ChatView projectId={projectId} />}
-                    {activeTab === 2 && ( /* <-- NEW VIEW */
+                    {activeTab === 2 && (
                         <ProjectMembersManager 
                             project={project}
                             onAddMember={handleAddMember}

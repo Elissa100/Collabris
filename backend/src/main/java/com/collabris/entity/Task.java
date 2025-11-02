@@ -26,6 +26,11 @@ public class Task {
     @Column(nullable = false)
     private Status status = Status.TO_DO;
 
+    // --- NEW FIELD ---
+    @Enumerated(EnumType.STRING)
+    private Priority priority = Priority.MEDIUM;
+
+    // --- MODIFIED FIELD (was already present but now we'll use it more) ---
     private LocalDate dueDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -40,7 +45,6 @@ public class Task {
     @JoinColumn(name = "creator_id", nullable = false)
     private User creator;
 
-    // --- NEW RELATIONSHIP ---
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "task_attachments",
@@ -59,6 +63,14 @@ public class Task {
         TO_DO,
         IN_PROGRESS,
         DONE
+    }
+
+    // --- NEW ENUM ---
+    public enum Priority {
+        LOW,
+        MEDIUM,
+        HIGH,
+        URGENT
     }
 
     @PrePersist
@@ -81,6 +93,8 @@ public class Task {
     public void setDescription(String description) { this.description = description; }
     public Status getStatus() { return status; }
     public void setStatus(Status status) { this.status = status; }
+    public Priority getPriority() { return priority; }
+    public void setPriority(Priority priority) { this.priority = priority; }
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
     public Project getProject() { return project; }
@@ -89,10 +103,10 @@ public class Task {
     public void setAssignee(User assignee) { this.assignee = assignee; }
     public User getCreator() { return creator; }
     public void setCreator(User creator) { this.creator = creator; }
+    public Set<FileMetadata> getAttachments() { return attachments; }
+    public void setAttachments(Set<FileMetadata> attachments) { this.attachments = attachments; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-    public Set<FileMetadata> getAttachments() { return attachments; }
-    public void setAttachments(Set<FileMetadata> attachments) { this.attachments = attachments; }
 }

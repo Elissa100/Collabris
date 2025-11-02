@@ -32,7 +32,6 @@ public class TaskService {
     @Autowired
     private NotificationService notificationService;
     
-    // --- NEW DEPENDENCY ---
     @Autowired
     private FileMetadataRepository fileMetadataRepository;
 
@@ -46,6 +45,17 @@ public class TaskService {
         task.setProject(project);
         task.setCreator(creator);
 
+        // --- UPDATED LOGIC ---
+        if (request.getPriority() != null) {
+            task.setPriority(request.getPriority());
+        }
+        if (request.getDueDate() != null) {
+            task.setDueDate(request.getDueDate());
+        }
+        if (request.getStatus() != null) {
+            task.setStatus(request.getStatus());
+        }
+
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new NoSuchElementException("Assignee user not found with ID: " + request.getAssigneeId()));
@@ -55,16 +65,7 @@ public class TaskService {
                     creator.getUsername(), task.getTitle(), project.getName());
             notificationService.createAndSendNotification(creator, assignee, NotificationType.TASK_ASSIGNED, message, "task", task.getId());
         }
-
-        if (request.getStatus() != null) {
-            task.setStatus(request.getStatus());
-        }
-
-        if (request.getDueDate() != null) {
-            task.setDueDate(request.getDueDate());
-        }
         
-        // --- NEW LOGIC for attachments ---
         if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
             Set<FileMetadata> attachments = new HashSet<>(fileMetadataRepository.findAllById(request.getAttachmentIds()));
             task.setAttachments(attachments);
@@ -103,7 +104,10 @@ public class TaskService {
         User oldAssignee = task.getAssignee();
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
+        
+        // --- UPDATED LOGIC ---
         if (request.getStatus() != null) task.setStatus(request.getStatus());
+        if (request.getPriority() != null) task.setPriority(request.getPriority());
         if (request.getDueDate() != null) task.setDueDate(request.getDueDate());
 
         if (request.getAssigneeId() != null) {
@@ -120,7 +124,6 @@ public class TaskService {
             task.setAssignee(null);
         }
         
-        // --- NEW LOGIC for attachments ---
         if (request.getAttachmentIds() != null) {
             Set<FileMetadata> attachments = new HashSet<>(fileMetadataRepository.findAllById(request.getAttachmentIds()));
             task.setAttachments(attachments);

@@ -16,11 +16,14 @@ public class TaskRequest {
 
     private Task.Status status;
 
+    // --- NEW FIELD ---
+    private Task.Priority priority;
+
     private LocalDate dueDate;
 
     private Long assigneeId;
 
-    private Set<Long> attachmentIds; // A set of IDs from FileMetadata
+    private Set<Long> attachmentIds;
 
     // Getters and Setters
     public String getTitle() { return title; }
@@ -29,6 +32,8 @@ public class TaskRequest {
     public void setDescription(String description) { this.description = description; }
     public Task.Status getStatus() { return status; }
     public void setStatus(Task.Status status) { this.status = status; }
+    public Task.Priority getPriority() { return priority; }
+    public void setPriority(Task.Priority priority) { this.priority = priority; }
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
     public Long getAssigneeId() { return assigneeId; }
