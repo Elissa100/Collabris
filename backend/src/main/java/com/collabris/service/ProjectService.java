@@ -27,6 +27,10 @@ public class ProjectService {
     private UserRepository userRepository;
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+    
+    // --- NEW DEPENDENCY ---
+    @Autowired
+    private ActivityLogService activityLogService;
 
     @Transactional
     public ProjectResponse createProject(ProjectRequest projectRequest, User owner) {
@@ -46,8 +50,11 @@ public class ProjectService {
         project.setChatRoom(projectChatRoom);
 
         Project savedProject = projectRepository.save(project);
+        
+        // --- LOG ACTIVITY ---
+        String details = String.format("created project '%s'", savedProject.getName());
+        activityLogService.logActivity(owner, "CREATE_PROJECT", "Project", savedProject.getId(), details);
 
-        // Force Hibernate to load the lazy collections before the session closes
         Hibernate.initialize(savedProject.getOwner());
         Hibernate.initialize(savedProject.getMembers());
 
@@ -60,7 +67,6 @@ public class ProjectService {
     public ProjectResponse getProjectById(Long projectId) {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new NoSuchElementException("Project not found with ID: " + projectId));
-        // Force initialization before returning
         Hibernate.initialize(project.getOwner());
         Hibernate.initialize(project.getMembers());
         return new ProjectResponse(project);
@@ -68,7 +74,6 @@ public class ProjectService {
 
     public List<ProjectResponse> getProjectsByMemberId(Long userId) {
         List<Project> projects = projectRepository.findByMemberId(userId);
-        // Eagerly fetch necessary data within the transaction
         projects.forEach(p -> {
             Hibernate.initialize(p.getOwner());
             Hibernate.initialize(p.getMembers());
@@ -103,6 +108,13 @@ public class ProjectService {
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
         project.addMember(user);
         Project savedProject = projectRepository.save(project);
+        
+        // --- LOG ACTIVITY ---
+        String details = String.format("added user @%s to project '%s'", user.getUsername(), savedProject.getName());
+        // For now, we don't know who initiated this, so actor is null. A better implementation
+        // would pass the 'actor' user into this method.
+        activityLogService.logActivity(null, "ADD_MEMBER", "Project", savedProject.getId(), details);
+
         Hibernate.initialize(savedProject.getOwner());
         Hibernate.initialize(savedProject.getMembers());
         return new ProjectResponse(savedProject);

@@ -8,9 +8,9 @@ import Layout from '../../components/Layout/Layout';
 import StatsCard from '../../components/Common/StatsCard';
 import { getManagerDashboardStats } from '../../services/dashboardService';
 import LoadingSpinner from '../../components/Common/LoadingSpinner';
+import ActivityFeedWidget from './ActivityFeedWidget'; //
 
 const COLORS = ['#00C49F', '#FFBB28', '#FF8042']; // On Track, At Risk, Overdue
-// Mock data for one chart (can be replaced later with live data)
 const teamPerformanceData = [ { name: 'Frontend', tasks_completed: 45 }, { name: 'Backend', tasks_completed: 62 }, { name: 'Design', tasks_completed: 30 }, { name: 'QA', tasks_completed: 55 }, ];
 
 const ManagerDashboard = () => {
@@ -57,27 +57,15 @@ const ManagerDashboard = () => {
                     <Grid item xs={12} sm={4}><StatsCard title="Active Teams" value={stats.totalTeams} icon={<Group />} color="secondary" /></Grid>
                     <Grid item xs={12} sm={4}><StatsCard title="Tasks Completed This Week" value={stats.tasksCompletedThisWeek} icon={<TrendingUp />} color="success" /></Grid>
 
+                    {/* --- 2. ADD THE WIDGET TO THE GRID --- */}
                     <Grid item xs={12} md={7}>
-                        <Card sx={{ height: '100%' }}>
-                            <CardContent>
-                                <Typography variant="h6" gutterBottom>Team Performance (Tasks Completed)</Typography>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={teamPerformanceData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                        <XAxis dataKey="name" />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Legend />
-                                        <Bar dataKey="tasks_completed" fill="#8884d8" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </CardContent>
-                        </Card>
+                        <ActivityFeedWidget />
                     </Grid>
+
                     <Grid item xs={12} md={5}>
                          <Card sx={{ height: '100%' }}>
                             <CardContent>
                                 <Typography variant="h6" gutterBottom>Overall Project Health</Typography>
-                                {/* --- FIX: USING LIVE DATA --- */}
                                 {stats.projectsStatusData && (
                                     <ResponsiveContainer width="100%" height={300}>
                                         <PieChart>
