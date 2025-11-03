@@ -26,11 +26,9 @@ public class Task {
     @Column(nullable = false)
     private Status status = Status.TO_DO;
 
-    // --- NEW FIELD ---
     @Enumerated(EnumType.STRING)
     private Priority priority = Priority.MEDIUM;
 
-    // --- MODIFIED FIELD (was already present but now we'll use it more) ---
     private LocalDate dueDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -53,6 +51,18 @@ public class Task {
     )
     private Set<FileMetadata> attachments = new HashSet<>();
 
+    // --- NEW: DEPENDENCY RELATIONSHIPS ---
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "task_dependencies",
+        joinColumns = @JoinColumn(name = "task_id"), // The task that is blocked
+        inverseJoinColumns = @JoinColumn(name = "dependency_id") // The task that must be completed first
+    )
+    private Set<Task> dependencies = new HashSet<>(); // Tasks that block this task
+
+    @ManyToMany(mappedBy = "dependencies", fetch = FetchType.LAZY)
+    private Set<Task> blocking = new HashSet<>(); // Tasks that this task blocks
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -65,7 +75,6 @@ public class Task {
         DONE
     }
 
-    // --- NEW ENUM ---
     public enum Priority {
         LOW,
         MEDIUM,
@@ -82,6 +91,15 @@ public class Task {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    // --- Helper Methods for Dependencies ---
+    public void addDependency(Task task) {
+        this.dependencies.add(task);
+    }
+
+    public void removeDependency(Task task) {
+        this.dependencies.remove(task);
     }
 
     // --- Getters and Setters ---
@@ -105,6 +123,10 @@ public class Task {
     public void setCreator(User creator) { this.creator = creator; }
     public Set<FileMetadata> getAttachments() { return attachments; }
     public void setAttachments(Set<FileMetadata> attachments) { this.attachments = attachments; }
+    public Set<Task> getDependencies() { return dependencies; }
+    public void setDependencies(Set<Task> dependencies) { this.dependencies = dependencies; }
+    public Set<Task> getBlocking() { return blocking; }
+    public void setBlocking(Set<Task> blocking) { this.blocking = blocking; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }

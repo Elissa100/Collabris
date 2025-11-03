@@ -1,11 +1,17 @@
+// File path: backend/src/main/java/com/collabris/controller/ProjectController.java
 package com.collabris.controller;
 
 import com.collabris.dto.request.ProjectRequest;
+import com.collabris.dto.request.TaskRequest;
 import com.collabris.dto.response.ProjectResponse;
+import com.collabris.dto.response.TaskResponse;
 import com.collabris.entity.User;
 import com.collabris.service.ProjectService;
+import com.collabris.service.TaskService; // <-- NEW IMPORT
 import com.collabris.service.UserService;
+import jakarta.validation.Valid; // <-- NEW IMPORT
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus; // <-- NEW IMPORT
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,6 +27,8 @@ public class ProjectController {
     private ProjectService projectService;
     @Autowired
     private UserService userService;
+    @Autowired
+    private TaskService taskService; // <-- NEW DEPENDENCY
 
     private User getCurrentUser(UserDetails userDetails) {
         return userService.findByUsername(userDetails.getUsername())
@@ -30,7 +38,6 @@ public class ProjectController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ProjectResponse> createProject(@RequestBody ProjectRequest request, @AuthenticationPrincipal UserDetails userDetails) {
-        // FIX: Service now returns the correct DTO directly
         return ResponseEntity.ok(projectService.createProject(request, getCurrentUser(userDetails)));
     }
 
@@ -49,7 +56,6 @@ public class ProjectController {
     @PutMapping("/{projectId}")
     @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
     public ResponseEntity<ProjectResponse> updateProject(@PathVariable Long projectId, @RequestBody ProjectRequest request) {
-        // FIX: Service now returns the correct DTO directly
         return ResponseEntity.ok(projectService.updateProject(projectId, request));
     }
 
@@ -70,5 +76,22 @@ public class ProjectController {
     @PreAuthorize("hasRole('ADMIN') or @projectRepository.findById(#projectId).get().getOwner().getUsername() == authentication.name")
     public ResponseEntity<ProjectResponse> removeMemberFromProject(@PathVariable Long projectId, @PathVariable Long userId) {
         return ResponseEntity.ok(projectService.removeMemberFromProject(projectId, userId));
+    }
+
+    // --- NEW TASK-RELATED ENDPOINTS ---
+
+    @PostMapping("/{projectId}/tasks")
+    @PreAuthorize("isAuthenticated() and @securityUtils.isProjectMember(#projectId)")
+    public ResponseEntity<TaskResponse> createTaskInProject(@PathVariable Long projectId,
+                                                            @Valid @RequestBody TaskRequest taskRequest,
+                                                            @AuthenticationPrincipal UserDetails userDetails) {
+        TaskResponse createdTask = taskService.createTask(taskRequest, projectId, getCurrentUser(userDetails));
+        return new ResponseEntity<>(createdTask, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/{projectId}/tasks")
+    @PreAuthorize("isAuthenticated() and @securityUtils.isProjectMember(#projectId)")
+    public ResponseEntity<List<TaskResponse>> getTasksForProject(@PathVariable Long projectId) {
+        return ResponseEntity.ok(taskService.getTasksForProject(projectId));
     }
 }

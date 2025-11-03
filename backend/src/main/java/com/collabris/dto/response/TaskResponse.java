@@ -12,21 +12,22 @@ public class TaskResponse {
     private String title;
     private String description;
     private Task.Status status;
-    private Task.Priority priority; // --- NEW FIELD ---
+    private Task.Priority priority;
     private LocalDate dueDate;
     private Long projectId;
     private UserResponse assignee;
     private UserResponse creator;
-    private Set<FileMetadataResponse> attachments; // --- NEW FIELD ---
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Set<FileMetadataResponse> attachments;
+    
+    private Set<TaskDependencyInfo> dependencies;
+    private Set<TaskDependencyInfo> blocking;
 
     public TaskResponse(Task task) {
         this.id = task.getId();
         this.title = task.getTitle();
         this.description = task.getDescription();
         this.status = task.getStatus();
-        this.priority = task.getPriority(); // --- NEW ---
+        this.priority = task.getPriority();
         this.dueDate = task.getDueDate();
         this.projectId = task.getProject().getId();
         this.creator = new UserResponse(task.getCreator());
@@ -42,7 +43,38 @@ public class TaskResponse {
                     .map(FileMetadataResponse::new)
                     .collect(Collectors.toSet());
         }
+
+        // --- NEW LOGIC ---
+        if (task.getDependencies() != null) {
+            this.dependencies = task.getDependencies().stream()
+                    .map(TaskDependencyInfo::new)
+                    .collect(Collectors.toSet());
+        }
+
+        if (task.getBlocking() != null) {
+            this.blocking = task.getBlocking().stream()
+                    .map(TaskDependencyInfo::new)
+                    .collect(Collectors.toSet());
+        }
     }
+    
+    // A nested DTO to prevent infinitely deep JSON responses
+    public static class TaskDependencyInfo {
+        private Long id;
+        private String title;
+        private Task.Status status;
+
+        public TaskDependencyInfo(Task task) {
+            this.id = task.getId();
+            this.title = task.getTitle();
+            this.status = task.getStatus();
+        }
+
+        public Long getId() { return id; }
+        public String getTitle() { return title; }
+        public Task.Status getStatus() { return status; }
+    }
+
 
     // Getters
     public Long getId() { return id; }
@@ -55,6 +87,11 @@ public class TaskResponse {
     public UserResponse getAssignee() { return assignee; }
     public UserResponse getCreator() { return creator; }
     public Set<FileMetadataResponse> getAttachments() { return attachments; }
+    public Set<TaskDependencyInfo> getDependencies() { return dependencies; }
+    public Set<TaskDependencyInfo> getBlocking() { return blocking; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
