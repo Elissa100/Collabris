@@ -22,17 +22,12 @@ public class TaskService {
 
     @Autowired
     private TaskRepository taskRepository;
-
     @Autowired
     private ProjectRepository projectRepository;
-
     @Autowired
     private UserRepository userRepository;
-
     @Autowired
     private NotificationService notificationService;
-    
-    // --- NEW DEPENDENCY ---
     @Autowired
     private FileMetadataRepository fileMetadataRepository;
 
@@ -46,25 +41,19 @@ public class TaskService {
         task.setProject(project);
         task.setCreator(creator);
 
+        if (request.getPriority() != null) task.setPriority(request.getPriority());
+        if (request.getDueDate() != null) task.setDueDate(request.getDueDate());
+        if (request.getStatus() != null) task.setStatus(request.getStatus());
+
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())
                     .orElseThrow(() -> new NoSuchElementException("Assignee user not found with ID: " + request.getAssigneeId()));
             task.setAssignee(assignee);
 
-            String message = String.format("%s assigned you a new task: '%s' in project '%s'",
-                    creator.getUsername(), task.getTitle(), project.getName());
-            notificationService.createAndSendNotification(creator, assignee, NotificationType.TASK_ASSIGNED, message, "task", task.getId());
-        }
-
-        if (request.getStatus() != null) {
-            task.setStatus(request.getStatus());
-        }
-
-        if (request.getDueDate() != null) {
-            task.setDueDate(request.getDueDate());
+            String message = String.format("%s assigned you a new task: '%s'", creator.getUsername(), task.getTitle());
+            notificationService.createAndSendNotification(creator, assignee, NotificationType.TASK_ASSIGNED, message, "task", null);
         }
         
-        // --- NEW LOGIC for attachments ---
         if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
             Set<FileMetadata> attachments = new HashSet<>(fileMetadataRepository.findAllById(request.getAttachmentIds()));
             task.setAttachments(attachments);
@@ -73,7 +62,7 @@ public class TaskService {
         Task savedTask = taskRepository.save(task);
         return new TaskResponse(savedTask);
     }
-
+    
     @Transactional(readOnly = true)
     public List<TaskResponse> getTasksForProject(Long projectId) {
         if (!projectRepository.existsById(projectId)) {
@@ -103,7 +92,9 @@ public class TaskService {
         User oldAssignee = task.getAssignee();
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
+        
         if (request.getStatus() != null) task.setStatus(request.getStatus());
+        if (request.getPriority() != null) task.setPriority(request.getPriority());
         if (request.getDueDate() != null) task.setDueDate(request.getDueDate());
 
         if (request.getAssigneeId() != null) {
@@ -120,7 +111,6 @@ public class TaskService {
             task.setAssignee(null);
         }
         
-        // --- NEW LOGIC for attachments ---
         if (request.getAttachmentIds() != null) {
             Set<FileMetadata> attachments = new HashSet<>(fileMetadataRepository.findAllById(request.getAttachmentIds()));
             task.setAttachments(attachments);
@@ -129,11 +119,69 @@ public class TaskService {
         Task updatedTask = taskRepository.save(task);
         return new TaskResponse(updatedTask);
     }
-
+    
     public void deleteTask(Long taskId) {
         if (!taskRepository.existsById(taskId)) {
             throw new NoSuchElementException("Task not found with ID: " + taskId);
         }
         taskRepository.deleteById(taskId);
+    }
+
+    // --- NEW METHODS FOR DEPENDENCIES ---
+
+    public void addDependency(Long taskId, Long dependencyId) {
+        Task task = taskRepository.findById(taskId).orElseThrow(() -> new NoSuchElementException("Task not found"));
+        Task dependency = taskRepository.findById(dependencyId).orElseThrow(() -> new NoSuchElementException("Dependency task not found"));
+
+        if (taskId.equals(dependencyId)) {
+            throw new IllegalStateException("A task cannot depend on itself.");
+        }
+
+        if (hasCircularDependency(task, dependency)) {
+            throw new IllegalStateException("Adding this dependency would create a circular reference.");
+        }
+
+        task.addDependency(dependency);
+        taskRepository.save(task);
+    }
+
+    public void removeDependency(Long taskId, Long dependencyId) {
+        Task task = taskRepository.findById(taskId).orElseThrow(() -> new NoSuchElementException("Task not found"));
+        Task dependency = taskRepository.findById(dependencyId).orElseThrow(() -> new NoSuchElementException("Dependency task not found"));
+        task.removeDependency(dependency);
+        taskRepository.save(task);
+    }
+    
+    /**
+     * Checks if adding 'dependency' to 'task' would create a circular dependency.
+     * It does this by checking if 'task' is already a dependency of 'dependency' down the chain.
+     * @param task The task to which a dependency is being added.
+     * @param dependency The potential dependency task.
+     * @return true if a circular dependency is detected, false otherwise.
+     */
+    private boolean hasCircularDependency(Task task, Task dependency) {
+        Set<Task> visited = new HashSet<>();
+        return checkCycle(dependency, task, visited);
+    }
+
+    private boolean checkCycle(Task current, Task target, Set<Task> visited) {
+        if (current.equals(target)) {
+            return true; // Cycle detected
+        }
+        if (visited.contains(current)) {
+            return false; // Already checked this path
+        }
+        visited.add(current);
+
+        // This requires the dependencies to be eagerly fetched for the traversal
+        // A more optimized approach might involve custom queries, but this is fine for now
+        Task currentWithDeps = taskRepository.findById(current.getId()).get();
+        
+        for (Task next : currentWithDeps.getDependencies()) {
+            if (checkCycle(next, target, visited)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

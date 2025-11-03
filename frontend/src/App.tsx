@@ -8,8 +8,8 @@ import { store, useAppDispatch, useAppSelector } from './store/store';
 import { useTheme } from './hooks/useTheme';
 
 import { getCurrentUser, selectInitialLoad, selectIsAuthenticated, selectUser } from './store/slices/authSlice';
-import { addNotification } from './store/slices/notificationSlice'; // <-- 1. IMPORT ACTION
-import useWebSocket from './hooks/useWebSocket'; // <-- 2. IMPORT HOOK
+import { addNotification } from './store/slices/notificationSlice';
+import useWebSocket from './hooks/useWebSocket';
 
 // Pages
 import Landing from './pages/Landing/Landing';
@@ -20,7 +20,7 @@ import Profile from './pages/Profile/Profile';
 import Settings from './pages/Settings/Settings';
 import VerifyEmail from './pages/Auth/VerifyEmail';
 import ProjectsPage from './pages/Projects/ProjectsPage';
-import ProjectDetailPage from './pages/Projects/ProjectDetailPage';
+import ProjectDetailPage from './pages/Projects/ProjectDetailPage.tsx'; // <-- UPDATED IMPORT
 import TeamsPage from './pages/Teams/TeamsPage';
 import TeamDetailPage from './pages/Teams/TeamDetailPage';
 
@@ -34,22 +34,16 @@ const InitialLoadingScreen = () => (
     </Box>
 );
 
-// --- 3. CREATE A DEDICATED WEBSOCKET MANAGER ---
 const WebSocketManager = () => {
     const dispatch = useAppDispatch();
     const user = useAppSelector(selectUser);
     const { subscribe } = useWebSocket("http://localhost:8080/ws");
 
-    // This callback will handle incoming notifications
     const handleIncomingNotification = useCallback((msg: any) => {
         try {
             const notification = JSON.parse(msg.body);
-            // Dispatch to Redux to update the state
             dispatch(addNotification(notification));
-            // Show a toast message to the user
-            toast.success(notification.message, {
-                icon: '🔔',
-            });
+            toast.success(notification.message, { icon: '🔔' });
         } catch (error) {
             console.error("Could not parse incoming notification:", error);
         }
@@ -58,22 +52,14 @@ const WebSocketManager = () => {
     useEffect(() => {
         let subscription: any = null;
         if (user) {
-            // Subscribe to the user-specific channel
             const destination = `/user/${user.username}/queue/notifications`;
             subscription = subscribe(destination, handleIncomingNotification);
         }
-
-        // Cleanup on component unmount or user change
-        return () => {
-            if (subscription) {
-                subscription.unsubscribe();
-            }
-        };
+        return () => { if (subscription) subscription.unsubscribe(); };
     }, [user, subscribe, handleIncomingNotification]);
 
-    return null; // This component does not render anything
+    return null;
 };
-
 
 const AppContent = () => {
     const dispatch = useAppDispatch();
@@ -96,7 +82,7 @@ const AppContent = () => {
             <CssBaseline />
             <Toaster position="bottom-right" reverseOrder={false} />
             <Router>
-                {isAuthenticated && <WebSocketManager />} {/* <-- 4. RENDER THE MANAGER */}
+                {isAuthenticated && <WebSocketManager />}
                 <Routes>
                     <Route path="/" element={<Landing />} />
                     <Route path="/login" element={<Login />} />
