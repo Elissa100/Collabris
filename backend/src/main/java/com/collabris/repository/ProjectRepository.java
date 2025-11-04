@@ -16,9 +16,10 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     @Query("SELECT p FROM Project p JOIN p.members m WHERE m.id = :userId")
     List<Project> findByMemberId(@Param("userId") Long userId);
     
-    @Query("SELECT p FROM Project p WHERE p.team.id = :teamId")
-    List<Project> findByTeamId(@Param("teamId") Long teamId);
+    // RENAMED for clarity
+    @Query("SELECT p FROM Project p LEFT JOIN FETCH p.members WHERE lower(p.name) LIKE lower(concat('%', :searchTerm, '%')) OR lower(p.description) LIKE lower(concat('%', :searchTerm, '%'))")
+    List<Project> searchByNameOrDescription(@Param("searchTerm") String searchTerm);
     
-    @Query("SELECT p FROM Project p WHERE p.name LIKE %:search% OR p.description LIKE %:search%")
-    List<Project> findBySearchTerm(@Param("search") String search);
+    // This query is no longer needed with the one above
+    // List<Project> findByTeamId(@Param("teamId") Long teamId);
 }

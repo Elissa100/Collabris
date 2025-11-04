@@ -17,13 +17,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Boolean existsByUsername(String username);
     Boolean existsByEmail(String email);
 
-    @Query("SELECT u FROM User u WHERE u.username LIKE %:search% OR u.email LIKE %:search% OR u.firstName LIKE %:search% OR u.lastName LIKE %:search%")
-    List<User> findBySearchTerm(@Param("search") String search);
+    // RENAMED for clarity
+    @Query("SELECT u FROM User u WHERE lower(u.username) LIKE lower(concat('%', :searchTerm, '%')) OR lower(u.email) LIKE lower(concat('%', :searchTerm, '%')) OR lower(u.firstName) LIKE lower(concat('%', :searchTerm, '%')) OR lower(u.lastName) LIKE lower(concat('%', :searchTerm, '%'))")
+    List<User> searchByTerm(@Param("searchTerm") String searchTerm);
 
     @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :roleName")
     List<User> findByRoleName(@Param("roleName") String roleName);
 
-    // --- THIS IS THE MISSING METHOD ---
-    // This method is required by the DashboardController to count users for the pie chart.
     long countByRoles_Name(Role.ERole roleName);
 }

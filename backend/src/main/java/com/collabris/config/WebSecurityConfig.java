@@ -1,3 +1,4 @@
+// File path: backend/src/main/java/com/collabris/config/WebSecurityConfig.java
 package com.collabris.config;
 
 import com.collabris.security.jwt.AuthEntryPointJwt;
@@ -70,31 +71,25 @@ public class WebSecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        // Apply CORS configuration first.
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
-
-        // Disable CSRF as we use JWT.
         http.csrf(csrf -> csrf.disable());
-
-        // Set up exception handling for unauthorized requests.
         http.exceptionHandling(e -> e.authenticationEntryPoint(unauthorizedHandler));
-
-        // Configure session management to be stateless.
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        // Define authorization rules for HTTP requests.
+        // --- THE FIX IS HERE ---
         http.authorizeHttpRequests(auth -> auth
-                // Explicitly permit all requests to these paths.
-                // This is the critical rule that allows the SockJS handshake.
-                .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**").permitAll()
-                // Any other request must be authenticated.
+                .requestMatchers(
+                        "/api/auth/**",
+                        "/ws/**",
+                        // Swagger UI v3 paths
+                        "/v3/api-docs/**",
+                        "/swagger-ui/**",
+                        "/swagger-ui.html" // <-- The specific page you were trying to access
+                ).permitAll()
                 .anyRequest().authenticated()
         );
 
-        // Set the custom authentication provider.
         http.authenticationProvider(authenticationProvider());
-        
-        // Add the JWT filter before the standard username/password filter.
         http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
